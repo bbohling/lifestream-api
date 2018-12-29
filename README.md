@@ -2,6 +2,10 @@
 
 A [Sails v1](https://sailsjs.com) application. Currently just an app that ingests Strava data and provides an API to support stuff like [uebersicht](https://github.com/felixhageloh/uebersicht)).
 
+## API
+
+* `/v1/ingest/:userId[?getAll=true]`
+* `/v1/activities`
 ---
 
 ## Links
@@ -16,6 +20,15 @@ A [Sails v1](https://sailsjs.com) application. Currently just an app that ingest
 ## Version info
 
 This app was originally generated on Fri Dec 28 2018 08:21:20 GMT-0800 (PST) using Sails v1.1.0.
+
+## TODO
+
+- [x] Partial vs. Full ingestion
+- [ ] Cycling Progress
+- [x] Ingest all activities (not just cycling)
+- [ ] Error handling
+- [ ] Proper logging
+- [ ] Web page with basic reports
 
 <!-- Internally, Sails used [`sails-generate@1.16.4`](https://github.com/balderdashy/sails-generate/tree/v1.16.4/lib/core-generators/new). -->
 
