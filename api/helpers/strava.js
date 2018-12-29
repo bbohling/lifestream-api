@@ -11,16 +11,24 @@ module.exports = {
       example: 'brandon',
       description: 'First name of the person.',
       required: true
+    },
+    getAll: {
+      type: 'boolean',
+      description: 'ingest all data',
+      required: false
     }
   },
   fn: startIngest
 }
 
+let ingestAllData = false;
+
 async function startIngest(inputs, exits) {
+  ingestAllData = inputs.getAll;
   const userToken = sails.config.users[inputs.userId].accessToken;
   const options = requestOptions(userToken);
   const done = await getActivities(options);
-  return exits.success(done);
+  return exits.success('success');
 }
 
 function requestOptions(accessToken) {
@@ -40,16 +48,18 @@ function requestOptions(accessToken) {
 function getActivities(options) {
   return request(options)
     .then(JSON.parse)
-    .then(justCyclingActivities)
     .then(activities => {
       if (activities && activities.length > 0) {
-        options.qs.page++;
-        return Promise.map(activities, activity => {
-          return findOrCreateActivity(activity);
-        }, { concurrency: 1 })
-          .then(() => {
-            return getActivities(options);
-          });
+        if ((!ingestAllData && options.qs.page < 2) || ingestAllData) {
+          sails.log(options.qs.page);
+          options.qs.page++;
+          return Promise.map(activities, activity => {
+            return findOrCreateActivity(activity);
+          }, { concurrency: 5 })
+            .then(() => {
+              return getActivities(options);
+            });
+        }
       }
       else {
         return;
@@ -57,34 +67,28 @@ function getActivities(options) {
     });
 }
 
-function justCyclingActivities(activities) {
-  return _.filter(activities, function (activity) {
-    return activity.type === 'Ride' || activity.type === 'VirtualRide';
-  });
-}
-
 function findOrCreateActivity(activity) {
   const data = {
     id: activity.id,
     athleteId: activity.athlete.id,
     name: activity.name || '',
-    distance: metersToMiles(activity.distance),
+    distance: activity.distance,
     movingTime: activity.moving_time,
     elapsedTime: activity.elapsed_time,
-    totalElevationGain: feetFromMeters(activity.total_elevation_gain),
-    elevationHigh: metersToFeet(activity.elev_high),
-    elevationLow: metersToFeet(activity.elev_low),
-    type: activity.type,
+    totalElevationGain: activity.total_elevation_gain,
+    elevationHigh: activity.elev_high,
+    elevationLow: activity.elev_low,
+    activityType: activity.type,
     startDate: activity.start_date_local,
     achievementCount: activity.achievement_count,
     prCount: activity.pr_count,
     trainer: activity.trainer,
     commute: activity.commute,
     gear: activity.gear_id || '',
-    averageSpeed: metersPerSecondToMilesPerHour(activity.average_speed),
-    maxSpeed: metersPerSecondToMilesPerHour(activity.max_speed),
+    averageSpeed: activity.average_speed,
+    maxSpeed: activity.max_speed,
     averageCadence: activity.average_cadence,
-    averageTemperature: farenheitFromCelcius(activity.average_temp),
+    averageTemperature: activity.average_temp,
     averageWatts: activity.average_watts,
     maxWattts: activity.max_watts,
     weightedAverageWatts: activity.weighted_average_watts,
@@ -107,6 +111,7 @@ function findOrCreateActivity(activity) {
 
 }
 
+// average/max speed calculation
 function metersPerSecondToMilesPerHour(mps) {
   let mph = 0;
   if (mps) {
@@ -115,6 +120,7 @@ function metersPerSecondToMilesPerHour(mps) {
   return mph;
 }
 
+// totalElevationGain calculation
 function feetFromMeters(m) {
   let ft = 0;
   if (m) {
@@ -123,6 +129,7 @@ function feetFromMeters(m) {
   return ft;
 }
 
+// elevation high/low calculation
 function metersToFeet(m) {
   let ft = 0;
   if (m) {
@@ -131,6 +138,7 @@ function metersToFeet(m) {
   return ft;
 }
 
+// distance calculation
 function metersToMiles(m) {
   let mi = 0;
   if (m) {
@@ -139,6 +147,7 @@ function metersToMiles(m) {
   return mi;
 }
 
+// averageTemperature calculation
 function farenheitFromCelcius(c) {
   let f = 0;
   if (c) {
