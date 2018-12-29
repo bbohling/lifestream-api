@@ -13,12 +13,13 @@ module.exports = {
 
 async function ingest(req, res) {
   const userId = req.params.userId;
+  const getAll = req.param('getAll');
+  sails.log(getAll);
   if (!userId) {
     return res.json(400, { error: 'No user provided.' });
   }
-  sails.log(userId);
-  const results = await sails.helpers.strava(userId);
+  const results = await sails.helpers.strava(userId, getAll);
   return res.json({
-    data: results
+    msg: results
   });
 }
