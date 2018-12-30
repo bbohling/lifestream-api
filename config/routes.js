@@ -22,7 +22,8 @@ module.exports.routes = {
   '/': { view: 'pages/homepage' },
   'get /v1/ingest': 'ActivityController.ingest',
   'get /v1/ingest/:userId': 'ActivityController.ingest',
-  'get /v1/reports/yearlyCycling/:userId': 'ReportController.yearlyCycling',
+  'get /v1/reports/cycling/yearly/:userId': 'ReportController.cyclingYearly',
+  'get /v1/reports/cycling/progress/:userId': 'ReportController.cyclingProgress',
 
 
   /***************************************************************************
