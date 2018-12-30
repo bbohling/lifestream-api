@@ -36,8 +36,8 @@ module.exports = {
       type: 'string'
     },
     startDate: {
-      type: 'string'//,
-      // columnType: 'datetime'
+      type: 'ref',
+      columnType: 'datetime'
     },
     achievementCount: {
       type: 'number'

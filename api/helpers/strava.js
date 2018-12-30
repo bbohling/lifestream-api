@@ -1,6 +1,7 @@
 
 const Promise = require("bluebird");
 const request = require("request-promise");
+const moment = require("moment");
 
 module.exports = {
   friendlyName: 'strava helper',
@@ -68,6 +69,7 @@ function getActivities(options) {
 }
 
 function findOrCreateActivity(activity) {
+  sails.log(activity.start_date_local);
   const data = {
     id: activity.id,
     athleteId: activity.athlete.id,
@@ -79,7 +81,7 @@ function findOrCreateActivity(activity) {
     elevationHigh: activity.elev_high,
     elevationLow: activity.elev_low,
     activityType: activity.type,
-    startDate: activity.start_date_local,
+    startDate: activity.start_date_local.replace('Z', ''),
     achievementCount: activity.achievement_count,
     prCount: activity.pr_count,
     trainer: activity.trainer,
