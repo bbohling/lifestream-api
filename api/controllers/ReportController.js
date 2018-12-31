@@ -148,6 +148,14 @@ async function processData(results) {
   });
   data.calories = (cals > 0) ? Math.ceil(cals) : 0;
 
+  // moving time
+  var times = _.pluck(results, 'movingTime');
+  var time = _.reduce(times, function (sum, num) {
+    return sum + num
+  });
+  var minutes = time / 60;
+  data.movingTimeMinutes = (minutes > 0) ? Math.ceil(minutes) : 0;
+
   return data;
 }
 
