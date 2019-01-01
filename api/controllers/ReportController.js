@@ -10,23 +10,23 @@ module.exports = {
 let dates = {};
 
 Object.defineProperty(dates, 'today', {
-  get: function () { return moment.utc().format(); }
+  get: function () { return moment.utc().utcOffset(-8, false).format(); }
 });
 
 Object.defineProperty(dates, 'todayDate', {
-  get: function () { return moment.utc().format(); }
+  get: function () { return moment.utc().utcOffset(-8, false).format(); }
 });
 
 Object.defineProperty(dates, 'firstDayThisYear', {
-  get: function () { return moment.utc().startOf('year').format(); }
+  get: function () { return moment.utc().utcOffset(-8, false).startOf('year').format(); }
 });
 
 Object.defineProperty(dates, 'lastYearToday', {
-  get: function () { return moment.utc().subtract(1, 'years').format(); }
+  get: function () { return moment.utc().utcOffset(-8, false).subtract(1, 'years').format(); }
 });
 
 Object.defineProperty(dates, 'firstDayLastYear', {
-  get: function () { return moment.utc().subtract(1, 'years').startOf('year').format(); }
+  get: function () { return moment.utc().utcOffset(-8, false).subtract(1, 'years').startOf('year').format(); }
 });
 
 async function cyclingYearly(req, res) {
@@ -53,6 +53,7 @@ async function cyclingYearly(req, res) {
 }
 
 async function cyclingProgress(req, res) {
+  sails.log(`today: ${dates.todayDate}`);
   const userId = req.params.userId;
   if (!userId) {
     return res.json(400, { error: 'No user provided.' });
