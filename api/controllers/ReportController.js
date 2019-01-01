@@ -36,14 +36,17 @@ async function cyclingYearly(req, res) {
   }
 
   const query = `
-    select YEAR(startDate) as 'Year',
-      cast(round((sum(distance)/1609.34),0) as INT) as Miles,
-      round((sum(movingTime)/(60*60))) as Hours,
-      cast(round((sum(totalElevationGain)/0.3048),0) as INT) as Climbing
-    from activity
-    where athleteId=${sails.config.users[userId].athleteId}
-      and (activityType='VirtualRide' OR activityType='Ride')
-    group by YEAR(startDate)`;
+  select YEAR(startDate) as 'year',
+    COUNT(DISTINCT DATE(startDate)) as 'rideDays',
+    cast(round((sum(distance)/1609.34),0) as INT) as miles,
+    round((sum(movingTime)/(60*60))) as hours,
+    cast(round((sum(totalElevationGain)/0.3048),0) as INT) as climbing,
+    cast(round(sum(kilojoules),0) as INT) as calories
+  from activity
+  where athleteId=${sails.config.users[userId].athleteId}
+    and (activityType='VirtualRide' OR activityType='Ride')
+  group by YEAR(startDate)
+  `;
 
   const results = await sails.sendNativeQuery(query);
 
@@ -53,7 +56,6 @@ async function cyclingYearly(req, res) {
 }
 
 async function cyclingProgress(req, res) {
-  sails.log(`today: ${dates.todayDate}`);
   const userId = req.params.userId;
   if (!userId) {
     return res.json(400, { error: 'No user provided.' });
@@ -73,8 +75,7 @@ async function cyclingProgress(req, res) {
       startDate: { "<=": dates.lastYearToday, ">=": dates.firstDayLastYear }
     }
   });
-  sails.log(dates.lastYearToday);
-  sails.log(dates.firstDayLastYear);
+
   let retval = {
     thisYear: await processData(thisYearResults),
     lastYear: await processData(lastYearResults)
