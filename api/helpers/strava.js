@@ -52,7 +52,6 @@ function getActivities(options) {
     .then(activities => {
       if (activities && activities.length > 0) {
         if ((!ingestAllData && options.qs.page < 2) || ingestAllData) {
-          sails.log(options.qs.page);
           options.qs.page++;
           return Promise.map(activities, activity => {
             return findOrCreateActivity(activity);
@@ -69,7 +68,6 @@ function getActivities(options) {
 }
 
 function findOrCreateActivity(activity) {
-  sails.log(activity.start_date_local);
   const data = {
     id: activity.id,
     athleteId: activity.athlete.id,
