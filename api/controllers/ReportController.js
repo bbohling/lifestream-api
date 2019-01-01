@@ -120,7 +120,7 @@ async function processData(results) {
   // average miles per day
   data.dailyAverage = 0;
   if (!isNaN(rawMiles)) {
-    var day = moment().dayOfYear();
+    var day = moment.utc().utcOffset(-8, false).dayOfYear();
     var avg = rawMiles / day;
     data.dailyAverage = Math.round(avg * 10) / 10;
   }
