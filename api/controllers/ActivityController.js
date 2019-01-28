@@ -14,6 +14,7 @@ module.exports = {
 async function ingest(req, res) {
   const userId = req.params.userId;
   const getAll = req.param('getAll');
+  console.log('getall', getAll);
   sails.log(getAll);
   if (!userId) {
     return res.json(400, { error: 'No user provided.' });

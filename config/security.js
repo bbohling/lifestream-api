@@ -28,11 +28,12 @@ module.exports.security = {
   *                                                                          *
   ***************************************************************************/
 
-  // cors: {
-  //   allRoutes: false,
-  //   allowOrigins: '*',
-  //   allowCredentials: false,
-  // },
+  cors: {
+    allRoutes: true,
+    // allowOrigins: ['http://localhost:1337', 'https://brndn.me'],
+    allowOrigins: '*',
+    allowCredentials: false,
+  },
 
 
   /****************************************************************************
@@ -45,10 +46,10 @@ module.exports.security = {
   * To enable CSRF protection, set this to `true`.                            *
   *                                                                           *
   * For more information, see:                                                *
-  * https://sailsjs.com/docs/concepts/security/csrf                           *
+  * https://sailsjs.com/docs  /concepts/security/csrf                           *
   *                                                                           *
   ****************************************************************************/
 
-  // csrf: false
+  csrf: false
 
 };
