@@ -13,7 +13,7 @@ module.exports = {
 
 async function ingest(req, res) {
   const userId = req.params.userId;
-  const getAll = req.param('getAll');
+  const getAll = req.param('getAll'); // ?getAll=true to ingest ALL strava data
   console.log('getall', getAll);
   sails.log(getAll);
   if (!userId) {
