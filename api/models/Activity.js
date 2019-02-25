@@ -2,6 +2,7 @@ module.exports = {
   attributes: {
     id: {
       type: 'number',
+      columnType: 'bigint',
       required: true
     },
     athleteId: {
