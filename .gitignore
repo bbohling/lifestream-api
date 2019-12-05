@@ -130,3 +130,6 @@ lib-cov
 *.out
 *.pid
 
+*.sql
+*.sh
+SERVER.md
