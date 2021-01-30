@@ -121,7 +121,7 @@ function getActivities(options) {
     .then(JSON.parse)
     .then(activities => {
       if (activities && activities.length > 0) {
-        // console.log(activities)
+        console.log(`activity count: ${activities.length}`);
         if ((!ingestAllData && options.qs.page < 2) || ingestAllData) {
           options.qs.page++;
           return Promise.map(activities, activity => {
