@@ -37,11 +37,13 @@ async function cyclingYearly(req, res) {
 
   const query = `
   select YEAR(startDate) as 'year',
+    count(*) as 'totalRides',
     COUNT(DISTINCT DATE(startDate)) as 'rideDays',
     cast(round((sum(distance)/1609.34),0) as INT) as miles,
     round((sum(movingTime)/(60*60))) as hours,
     cast(round((sum(totalElevationGain)/0.3048),0) as INT) as climbing,
-    cast(round(sum(kilojoules),0) as INT) as calories
+    cast(round(sum(kilojoules),0) as INT) as calories,
+    round((sum(sufferScore)/count(sufferScore))) as avgSufferScore
   from activity
   where athleteId=${sails.config.users[userId].athleteId}
     and (activityType='VirtualRide' OR activityType='Ride')
@@ -157,6 +159,11 @@ async function processData(results) {
   });
   var minutes = time / 60;
   data.movingTimeMinutes = (minutes > 0) ? Math.ceil(minutes) : 0;
+
+  // average sufferScore
+  var sufferScores = _.pluck(results, 'sufferScore');
+  var totalSuffering = _.reduce(sufferScores, (sum, num) => sum + num);
+  data.averageSufferScore = Math.round(totalSuffering / data.rides);
 
   return data;
 }
