@@ -2,6 +2,17 @@
 
 A [Sails v1](https://sailsjs.com) application. Currently just an app that ingests Strava data and provides an API to support stuff like [uebersicht](https://github.com/felixhageloh/uebersicht)).
 
+## 📋 Product Requirements Document
+
+**📄 [View the complete PRD](./PRD.md)** - Comprehensive modernization plan with 2025 JavaScript tech stack recommendations.
+
+The PRD includes:
+- Complete functional requirements based on existing features
+- Modern JavaScript technology stack recommendations (Node.js 22+, Express/Fastify, PostgreSQL/Prisma, etc.)
+- Migration strategy from current Sails.js implementation
+- Security improvements and performance optimizations
+- 16-week implementation roadmap
+
 ## API
 
 * `/v1/ingest/:userId[?getAll=true]`
