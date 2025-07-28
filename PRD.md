@@ -85,88 +85,788 @@ To provide a robust, modern, and scalable API platform for fitness data aggregat
 - **Profiles**: User-specific configuration and preferences
 - **Privacy**: Data access controls and sharing preferences
 
-### 3.2 API Endpoints
+### 3.2 Current System Functional Specifications
 
-#### 3.2.1 Data Ingestion
-```
-GET /v1/ingest/:userId?getAll=true
-- Trigger activity synchronization
-- Optional full historical sync
-- Returns: Sync status and activity count
-```
+> **Important**: This section documents the exact functionality currently implemented in the codebase that must be preserved during modernization.
 
-#### 3.2.2 Reporting
-```
-GET /v1/reports/cycling/yearly/:userId
-- Annual cycling statistics
-- Returns: Aggregated metrics by year
+#### 3.2.1 Data Ingestion Endpoint
 
-GET /v1/reports/cycling/progress/:userId
-- Year-over-year progress comparison
-- Returns: Current vs previous year metrics
+**Endpoint**: `GET /v1/ingest/:userId` and `GET /v1/ingest`
 
-GET /v1/activities/:userId?type=&startDate=&endDate=
-- Raw activity data with filtering
-- Returns: Paginated activity list
+**Implementation**: `ActivityController.ingest()`
 
-GET /v1/stats/:userId/summary
-- Overall user statistics
-- Returns: Lifetime totals and averages
-```
+**Parameters**:
+- `userId` (path parameter): User identifier (e.g., "brandon")
+- `getAll` (query parameter): Boolean flag to ingest all historical data vs incremental sync
 
-#### 3.2.3 Health & Status
-```
-GET /health
-- Service health check
-- Returns: Service status and dependencies
+**Functionality**:
+1. **Token Management**: Automatically checks and refreshes OAuth tokens
+2. **Strava API Integration**: Fetches activities from Strava API with pagination (200 activities per page)
+3. **Data Processing**: Transforms and normalizes Strava activity data
+4. **Database Operations**: Performs upsert operations (find or create) for each activity
+5. **Error Handling**: Returns appropriate error responses for missing users
 
-GET /v1/sync/status/:userId
-- Last sync information
-- Returns: Sync timestamp and status
+**Request Examples**:
+```bash
+# Incremental sync (default: 1 page = 200 most recent activities)
+GET /v1/ingest/brandon
+
+# Full historical sync (all activities)
+GET /v1/ingest/brandon?getAll=true
 ```
 
-### 3.3 Data Models
-
-#### 3.3.1 Activity
-```javascript
+**Response Format**:
+```json
 {
-  id: Number,           // Strava activity ID
-  athleteId: Number,    // Strava athlete ID
-  name: String,         // Activity name
-  distance: Number,     // Distance in meters
-  movingTime: Number,   // Moving time in seconds
-  elapsedTime: Number,  // Total elapsed time
-  totalElevationGain: Number, // Elevation gain in meters
-  activityType: String, // Activity type (Ride, Run, etc.)
-  startDate: Date,      // Activity start timestamp
-  averageSpeed: Number, // Average speed in m/s
-  maxSpeed: Number,     // Maximum speed in m/s
-  averageWatts: Number, // Average power output
-  kilojoules: Number,   // Energy expenditure
-  averageHeartRate: Number, // Average HR
-  maxHeartRate: Number, // Maximum HR
-  sufferScore: Number,  // Strava suffer score
-  gear: String,         // Equipment used
-  trainer: Boolean,     // Indoor trainer activity
-  commute: Boolean      // Commute flag
+  "msg": "success"
 }
 ```
 
-#### 3.3.2 User
-```javascript
+**Error Response**:
+```json
 {
-  id: Number,           // Internal user ID
-  name: String,         // User identifier
-  athleteId: Number,    // Strava athlete ID
-  accessToken: String,  // OAuth access token
-  refreshToken: String, // OAuth refresh token
-  expiresAt: Number,    // Token expiration timestamp
-  lastSync: Date,       // Last successful sync
-  preferences: Object   // User preferences
+  "error": "No user provided."
 }
 ```
 
-## 4. Technical Requirements
+#### 3.2.2 Strava Integration Details
+
+**OAuth Token Management**:
+- Automatic token expiration checking using Unix timestamps
+- Token refresh workflow using Strava OAuth endpoints
+- User token storage and updates in database
+- Support for multiple users with individual tokens
+
+**Strava API Endpoints Used**:
+- `POST /oauth/token` - Token refresh
+- `GET /api/v3/athlete/activities` - Activity data retrieval
+
+**Activity Data Mapping**:
+- **Input**: Strava activity JSON (25+ fields)
+- **Output**: Normalized activity record for database storage
+- **Transformations**: Unit conversions, date formatting, null handling
+
+**Rate Limiting**: Respects Strava API limits through controlled pagination
+
+#### 3.2.3 Reporting Endpoints
+
+**Cycling Yearly Report**
+
+**Endpoint**: `GET /v1/reports/cycling/yearly/:userId`
+
+**Implementation**: `ReportController.cyclingYearly()`
+
+**Functionality**:
+- Executes complex SQL query for annual cycling statistics
+- Groups data by year (YEAR(startDate))
+- Filters for cycling activities only ('VirtualRide' OR 'Ride')
+- Calculates comprehensive metrics per year
+
+**SQL Query Structure**:
+```sql
+SELECT YEAR(startDate) as 'year',
+  count(*) as 'totalRides',
+  COUNT(DISTINCT DATE(startDate)) as 'rideDays',
+  cast(round((sum(distance)/1609.34),0) as INT) as miles,
+  round((sum(movingTime)/(60*60))) as hours,
+  cast(round((sum(totalElevationGain)/0.3048),0) as INT) as climbing,
+  cast(round(sum(kilojoules),0) as INT) as calories,
+  round((sum(sufferScore)/count(sufferScore))) as avgSufferScore
+FROM activity
+WHERE athleteId=${athleteId} AND (activityType='VirtualRide' OR activityType='Ride')
+GROUP BY YEAR(startDate)
+```
+
+**Response Format**:
+```json
+{
+  "data": [
+    {
+      "year": 2024,
+      "totalRides": 105,
+      "rideDays": 91,
+      "miles": 2168,
+      "hours": 168,
+      "climbing": 161495,
+      "calories": 100418,
+      "avgSufferScore": 45
+    }
+  ]
+}
+```
+
+**Cycling Progress Report**
+
+**Endpoint**: `GET /v1/reports/cycling/progress/:userId`
+
+**Implementation**: `ReportController.cyclingProgress()`
+
+**Functionality**:
+- Year-over-year comparison (current year vs same period last year)
+- Complex date calculations with Pacific Time (UTC-8) handling
+- Detailed metrics processing including percentages and averages
+- Separate data processing for current year and previous year
+
+**Date Calculations**:
+```javascript
+// Dynamic date properties with Pacific Time offset
+dates.today = moment.utc().utcOffset(-8, false).format()
+dates.firstDayThisYear = moment.utc().utcOffset(-8, false).startOf('year').format()
+dates.lastYearToday = moment.utc().utcOffset(-8, false).subtract(1, 'years').format()
+dates.firstDayLastYear = moment.utc().utcOffset(-8, false).subtract(1, 'years').startOf('year').format()
+```
+
+**Metrics Calculated**:
+- **Total Rides**: Count of cycling activities
+- **Days Ridden**: Unique riding days (deduplication by date)
+- **Miles**: Distance converted from meters (sum(distance) / 1609.34)
+- **Ride Average**: Average miles per ride
+- **Daily Average**: Average miles per calendar day
+- **Percentage of Days**: Percentage of calendar days with rides
+- **Climbing**: Elevation gain converted to feet (sum(totalElevationGain) / 0.3048)
+- **Calories**: Energy expenditure from kilojoules
+- **Moving Time**: Total moving time in minutes
+- **Average Suffer Score**: Strava's relative effort metric
+
+**Response Format**:
+```json
+{
+  "data": {
+    "thisYear": {
+      "rides": 105,
+      "daysRidden": 91,
+      "miles": 2168,
+      "rideAverage": 20.6,
+      "dailyAverage": 6.0,
+      "percentageOfDays": 25,
+      "climbing": 161495,
+      "calories": 100418,
+      "movingTimeMinutes": 10089,
+      "averageSufferScore": 45
+    },
+    "lastYear": {
+      "rides": 83,
+      "daysRidden": 76,
+      "miles": 2065,
+      "rideAverage": 24.9,
+      "dailyAverage": 5.7,
+      "percentageOfDays": 20,
+      "climbing": 148667,
+      "calories": 104663,
+      "movingTimeMinutes": 9179,
+      "averageSufferScore": 52
+    }
+  }
+}
+```
+
+#### 3.2.4 Data Processing Logic
+
+**Unit Conversion Functions**:
+```javascript
+// Distance: meters to miles
+function metersToMiles(meters) {
+  return meters / 1609.34;
+}
+
+// Elevation: meters to feet  
+function metersToFeet(meters) {
+  return meters / 0.3048;
+}
+
+// Speed: meters per second to miles per hour
+function metersPerSecondToMilesPerHour(mps) {
+  return mps * 25 / 11;
+}
+
+// Temperature: Celsius to Fahrenheit
+function farenheitFromCelcius(celsius) {
+  return celsius * 9 / 5 + 32;
+}
+```
+
+**Date Processing**:
+- Timezone handling: Pacific Time (UTC-8 offset)
+- Date deduplication for unique riding days calculation
+- Year boundary calculations for progress comparisons
+- Day-of-year calculations for daily averages
+
+**Statistical Calculations**:
+- Aggregation functions (sum, count, average)
+- Percentage calculations
+- Rounding and precision control
+- Null value handling and filtering
+
+#### 3.2.5 Error Handling
+
+**User Validation**:
+```javascript
+if (!userId) {
+  return res.json(400, { error: 'No user provided.' });
+}
+```
+
+**Token Management Errors**:
+- Automatic retry on token expiration
+- Graceful fallback to refresh token flow
+- Error logging for failed API requests
+
+**Data Processing Errors**:
+- Null value filtering for calculations
+- Division by zero protection
+- Data type validation
+
+### 3.3 Current Data Models
+
+> **Note**: These models reflect the exact schema currently implemented and must be preserved during migration.
+
+#### 3.3.1 Activity Model
+
+**Table**: `activity`
+
+**Complete Schema** (from `api/models/Activity.js`):
+```javascript
+{
+  // Primary identifier (Strava activity ID)
+  id: {
+    type: 'number',
+    columnType: 'bigint',
+    required: true
+  },
+  
+  // Athlete information
+  athleteId: {
+    type: 'number'  // Strava athlete ID
+  },
+  
+  // Basic activity information
+  name: {
+    type: 'string'  // Activity title/name
+  },
+  activityType: {
+    type: 'string'  // 'Ride', 'VirtualRide', 'Run', etc.
+  },
+  startDate: {
+    type: 'ref',
+    columnType: 'datetime'  // Activity start timestamp
+  },
+  
+  // Distance and time metrics
+  distance: {
+    type: 'number',
+    columnType: 'FLOAT'  // Distance in meters
+  },
+  movingTime: {
+    type: 'number'  // Moving time in seconds
+  },
+  elapsedTime: {
+    type: 'number'  // Total elapsed time in seconds
+  },
+  
+  // Elevation metrics
+  totalElevationGain: {
+    type: 'number',
+    columnType: 'FLOAT'  // Elevation gain in meters
+  },
+  elevationHigh: {
+    type: 'number',
+    columnType: 'FLOAT'  // Highest elevation in meters
+  },
+  elevationLow: {
+    type: 'number',
+    columnType: 'FLOAT'  // Lowest elevation in meters
+  },
+  
+  // Achievement metrics
+  achievementCount: {
+    type: 'number'  // Number of achievements earned
+  },
+  prCount: {
+    type: 'number'  // Number of personal records
+  },
+  
+  // Activity flags
+  trainer: {
+    type: 'boolean'  // Indoor trainer activity
+  },
+  commute: {
+    type: 'boolean'  // Commute activity flag
+  },
+  
+  // Equipment
+  gear: {
+    type: 'string'  // Strava gear ID
+  },
+  
+  // Speed metrics
+  averageSpeed: {
+    type: 'number',
+    columnType: 'FLOAT'  // Average speed in m/s
+  },
+  maxSpeed: {
+    type: 'number',
+    columnType: 'FLOAT'  // Maximum speed in m/s
+  },
+  
+  // Cycling-specific metrics
+  averageCadence: {
+    type: 'number',
+    columnType: 'FLOAT'  // Average cadence in RPM
+  },
+  
+  // Environmental data
+  averageTemperature: {
+    type: 'number',
+    columnType: 'FLOAT'  // Average temperature in Celsius
+  },
+  
+  // Power metrics
+  averageWatts: {
+    type: 'number',
+    columnType: 'FLOAT'  // Average power in watts
+  },
+  maxWatts: {
+    type: 'number'  // Maximum power in watts
+  },
+  weightedAverageWatts: {
+    type: 'number'  // Normalized power
+  },
+  kilojoules: {
+    type: 'number',
+    columnType: 'FLOAT'  // Energy expenditure
+  },
+  deviceWatts: {
+    type: 'boolean'  // Power meter data available
+  },
+  
+  // Heart rate metrics
+  averageHeartRate: {
+    type: 'number',
+    columnType: 'FLOAT'  // Average heart rate in BPM
+  },
+  maxHeartRate: {
+    type: 'number'  // Maximum heart rate in BPM
+  },
+  
+  // Strava-specific metrics
+  sufferScore: {
+    type: 'number',
+    defaultsTo: 0  // Strava's relative effort score
+  }
+}
+```
+
+**Data Mapping from Strava API**:
+```javascript
+// Strava API field → Database field mapping
+{
+  id: activity.id,
+  athleteId: activity.athlete.id,
+  name: activity.name || '',
+  distance: activity.distance,
+  movingTime: activity.moving_time,
+  elapsedTime: activity.elapsed_time,
+  totalElevationGain: activity.total_elevation_gain,
+  elevationHigh: activity.elev_high,
+  elevationLow: activity.elev_low,
+  activityType: activity.type,
+  startDate: activity.start_date_local.replace('Z', ''),  // Remove Z suffix
+  achievementCount: activity.achievement_count,
+  prCount: activity.pr_count,
+  trainer: activity.trainer,
+  commute: activity.commute,
+  gear: activity.gear_id || '',
+  averageSpeed: activity.average_speed,
+  maxSpeed: activity.max_speed,
+  averageCadence: activity.average_cadence,
+  averageTemperature: activity.average_temp,
+  averageWatts: activity.average_watts,
+  maxWattts: activity.max_watts,  // Note: typo in original code
+  weightedAverageWatts: activity.weighted_average_watts,
+  kilojoules: activity.kilojoules,
+  deviceWatts: activity.device_watts,
+  averageHeartRate: activity.average_heartrate,
+  maxHeartRate: activity.max_heartrate,
+  sufferScore: activity.suffer_score || 0
+}
+```
+
+#### 3.3.2 User Model
+
+**Table**: `user`
+
+**Schema** (from `api/models/User.js`):
+```javascript
+{
+  // User identification
+  name: {
+    type: 'string'  // User identifier (e.g., "brandon")
+  },
+  
+  // OAuth token management
+  accessToken: {
+    type: 'string'  // Strava OAuth access token
+  },
+  refreshToken: {
+    type: 'string'  // Strava OAuth refresh token
+  },
+  expiresAt: {
+    type: 'number'  // Token expiration timestamp (Unix)
+  }
+}
+```
+
+**Token Management Logic**:
+```javascript
+// Token expiration check
+const expires = moment.unix(tokenInfo.expiresAt);
+const isExpired = moment().isAfter(expires);
+
+// Token refresh payload
+{
+  client_id: sails.config.apis.strava.clientId,
+  client_secret: sails.config.apis.strava.clientSecret,
+  grant_type: 'refresh_token',
+  refresh_token: user.refreshToken
+}
+```
+
+#### 3.3.3 Database Operations
+
+**Activity Upsert Logic**:
+```javascript
+// Find or create pattern used for activity synchronization
+Activity.findOne({ id: activity.id })
+  .then(results => {
+    if (results) {
+      return Activity.update({ id: activity.id }, data);  // Update existing
+    } else {
+      return Activity.create(data);  // Create new
+    }
+  });
+```
+
+**User Token Update Logic**:
+```javascript
+// Check if user exists, then update or create
+const existingUser = await User.findOne({ name: user });
+if (existingUser) {
+  await User.updateOne({ name: user }).set(tokenDetails);
+} else {
+  await User.create(tokenDetails);
+}
+```
+
+#### 3.3.4 Configuration Requirements
+
+**User Configuration Structure** (from `config/` usage):
+```javascript
+sails.config.users[userId] = {
+  athleteId: number,    // Strava athlete ID for database queries
+  refreshToken: string, // Initial refresh token for OAuth flow
+  // accessToken managed dynamically through refresh flow
+}
+```
+
+**Strava API Configuration**:
+```javascript
+sails.config.apis.strava = {
+  oauth: 'https://www.strava.com/oauth',
+  activities: 'https://www.strava.com/api/v3/athlete/activities',
+  clientId: 'your_client_id',
+  clientSecret: 'your_client_secret'
+}
+```
+
+### 3.4 Current System Architecture
+
+#### 3.4.1 Route Configuration
+
+**Current Routes** (from `config/routes.js`):
+```javascript
+{
+  // Homepage
+  '/': { view: 'pages/homepage' },
+  
+  // Data ingestion endpoints
+  'get /v1/ingest': 'ActivityController.ingest',
+  'get /v1/ingest/:userId': 'ActivityController.ingest',
+  
+  // Reporting endpoints  
+  'get /v1/reports/cycling/yearly/:userId': 'ReportController.cyclingYearly',
+  'get /v1/reports/cycling/progress/:userId': 'ReportController.cyclingProgress'
+}
+```
+
+**Route Handler Mapping**:
+- **ActivityController.ingest**: Handles Strava data synchronization
+- **ReportController.cyclingYearly**: Provides annual cycling statistics
+- **ReportController.cyclingProgress**: Provides year-over-year comparisons
+
+#### 3.4.2 Helper Functions
+
+**Strava Helper** (`api/helpers/strava.js`):
+
+**Purpose**: Complete Strava integration workflow including OAuth and data synchronization
+
+**Key Functions**:
+```javascript
+// Main entry point
+async function startIngest(inputs, exits) {
+  // 1. Token validation and refresh
+  const tokens = await requestRefreshToken(user);
+  // 2. API request configuration
+  const options = requestOptions(tokens);
+  // 3. Paginated activity fetching
+  const done = await getActivities(options);
+}
+
+// OAuth token management
+async function requestRefreshToken(user) {
+  // Check token expiration using moment.js
+  const expires = moment.unix(tokenInfo.expiresAt);
+  if (moment().isAfter(expires)) {
+    // Refresh expired token
+    tokenInfo = getNewToken({ user });
+  }
+}
+
+// Token refresh API call
+async function getNewToken({ refreshToken, user }) {
+  // POST to Strava OAuth endpoint
+  // Update user record with new tokens
+}
+
+// Strava API request configuration
+function requestOptions(tokens) {
+  return {
+    url: sails.config.apis.strava.activities,
+    qs: { per_page: 200, page: 1 },
+    headers: { Authorization: `Bearer ${tokens.accessToken}` },
+    useQuerystring: true
+  };
+}
+
+// Paginated activity fetching
+function getActivities(options) {
+  // Recursive function that:
+  // 1. Fetches 200 activities per page
+  // 2. Processes each activity in parallel (concurrency: 5)
+  // 3. Continues to next page until no more data
+  // 4. Respects getAll parameter for full vs incremental sync
+}
+
+// Activity database operations
+function findOrCreateActivity(activity) {
+  // Maps Strava activity to database format
+  // Performs upsert operation (update if exists, create if new)
+}
+```
+
+**Concurrency Control**:
+```javascript
+// Process activities with controlled concurrency
+Promise.map(activities, activity => {
+  return findOrCreateActivity(activity);
+}, { concurrency: 5 })
+```
+
+**Pagination Logic**:
+```javascript
+// Incremental sync: stop after 1 page (200 most recent activities)
+// Full sync: continue until no more activities returned
+if ((!ingestAllData && options.qs.page < 2) || ingestAllData) {
+  options.qs.page++;
+  return getActivities(options);  // Recursive call
+}
+```
+
+#### 3.4.3 Data Processing Workflows
+
+**Activity Ingestion Workflow**:
+```
+1. Validate userId parameter
+2. Check/refresh OAuth tokens
+3. Configure Strava API request
+4. Fetch activities (paginated)
+5. Transform each activity
+6. Upsert to database
+7. Continue pagination if needed
+8. Return success response
+```
+
+**Report Generation Workflow**:
+```
+1. Validate userId parameter  
+2. Look up athleteId from config
+3. Execute database queries
+4. Process raw data (calculations, conversions)
+5. Format response JSON
+6. Return structured data
+```
+
+**Token Management Workflow**:
+```
+1. Retrieve stored user tokens
+2. Check expiration using Unix timestamp
+3. If expired: refresh using refresh_token
+4. Update database with new tokens
+5. Use access_token for API calls
+```
+
+#### 3.4.4 Configuration Dependencies
+
+**Required Configuration Objects**:
+
+**User Configuration**:
+```javascript
+// Must be defined in config for each user
+sails.config.users = {
+  'brandon': {
+    athleteId: 123456,  // Used for database queries
+    refreshToken: 'abc123'  // Used for OAuth refresh
+  }
+  // Add more users as needed
+};
+```
+
+**Strava API Configuration**:
+```javascript
+sails.config.apis.strava = {
+  oauth: 'https://www.strava.com/oauth',
+  activities: 'https://www.strava.com/api/v3/athlete/activities',
+  clientId: process.env.STRAVA_CLIENT_ID,
+  clientSecret: process.env.STRAVA_CLIENT_SECRET
+};
+```
+
+**Database Configuration**:
+- MySQL connection configured through Sails.js datastore
+- Native query support for complex SQL in reports
+- ORM operations for CRUD activities
+
+#### 3.4.5 Current Technology Dependencies
+
+**Core Framework**:
+- Sails.js 1.2.3 (MVC framework)
+- Node.js ^8.11 (runtime)
+
+**Key Dependencies**:
+```javascript
+{
+  "request-promise": "^4.2.2",  // HTTP client for Strava API
+  "request": "^2.88.0",         // HTTP client base
+  "moment": "^2.23.0",          // Date/time manipulation
+  "bluebird": "^3.5.3"          // Promise utilities (Promise.map)
+}
+```
+
+**Database**:
+- MySQL with Sails.js ORM
+- Native query support for complex aggregations
+- Automatic migrations and schema management
+
+### 3.5 API Request/Response Examples
+
+#### 3.5.1 Activity Ingestion
+
+**Incremental Sync Request**:
+```bash
+GET /v1/ingest/brandon
+```
+
+**Full Historical Sync Request**:
+```bash
+GET /v1/ingest/brandon?getAll=true
+```
+
+**Success Response**:
+```json
+{
+  "msg": "success"
+}
+```
+
+**Error Response**:
+```json
+{
+  "error": "No user provided."
+}
+```
+
+#### 3.5.2 Cycling Yearly Report
+
+**Request**:
+```bash
+GET /v1/reports/cycling/yearly/brandon
+```
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "year": 2024,
+      "totalRides": 105,
+      "rideDays": 91,
+      "miles": 2168,
+      "hours": 168,
+      "climbing": 161495,
+      "calories": 100418,
+      "avgSufferScore": 45
+    },
+    {
+      "year": 2023,
+      "totalRides": 83,
+      "rideDays": 76,
+      "miles": 2065,
+      "hours": 153,
+      "climbing": 148667,
+      "calories": 104663,
+      "avgSufferScore": 52
+    }
+  ]
+}
+```
+
+#### 3.5.3 Cycling Progress Report
+
+**Request**:
+```bash
+GET /v1/reports/cycling/progress/brandon
+```
+
+**Response**:
+```json
+{
+  "data": {
+    "thisYear": {
+      "rides": 105,
+      "daysRidden": 91,
+      "miles": 2168,
+      "rideAverage": 20.6,
+      "dailyAverage": 6.0,
+      "percentageOfDays": 25,
+      "climbing": 161495,
+      "calories": 100418,
+      "movingTimeMinutes": 10089,
+      "averageSufferScore": 45
+    },
+    "lastYear": {
+      "rides": 83,
+      "daysRidden": 76,
+      "miles": 2065,
+      "rideAverage": 24.9,
+      "dailyAverage": 5.7,
+      "percentageOfDays": 20,
+      "climbing": 148667,
+      "calories": 104663,
+      "movingTimeMinutes": 9179,
+      "averageSufferScore": 52
+    }
+  }
+}
+```
 
 ### 4.1 Modern JavaScript Technology Stack (2025)
 
@@ -312,20 +1012,243 @@ src/
 
 ## 5. Integration Requirements
 
-### 5.1 External APIs
-- **Strava API v3**: Primary data source
-- **Future Integrations**: Garmin Connect, Wahoo, TrainingPeaks
-- **Webhook Support**: Real-time activity notifications
+### 5.1 Strava API Integration (Current Implementation)
 
-### 5.2 Consumer Applications
-- **REST API**: JSON responses, OpenAPI specification
-- **Real-time Updates**: WebSocket or Server-Sent Events
-- **Batch Operations**: Bulk data export capabilities
+#### 5.1.1 OAuth 2.0 Flow
 
-### 5.3 Data Export
-- **Formats**: JSON, CSV, GPX
-- **APIs**: RESTful endpoints for data retrieval
-- **Backup**: Automated data backup and recovery
+**Current Implementation Details**:
+- **Authorization URL**: `https://www.strava.com/oauth/authorize`
+- **Token Endpoint**: `https://www.strava.com/oauth/token`
+- **Grant Type**: `refresh_token` (for token refresh)
+- **Scope Requirements**: `read,activity:read_all`
+
+**Token Management**:
+```javascript
+// Token refresh request payload
+{
+  client_id: process.env.STRAVA_CLIENT_ID,
+  client_secret: process.env.STRAVA_CLIENT_SECRET,
+  grant_type: 'refresh_token',
+  refresh_token: user.refreshToken
+}
+
+// Token response structure
+{
+  access_token: string,
+  refresh_token: string,
+  expires_at: number,    // Unix timestamp
+  expires_in: number,    // Seconds until expiration
+  token_type: 'Bearer'
+}
+```
+
+**Token Storage**:
+- Tokens stored in User model
+- Automatic expiration checking before API calls
+- Automatic refresh workflow when expired
+- Per-user token management
+
+#### 5.1.2 Activity Data API
+
+**Endpoint**: `GET /api/v3/athlete/activities`
+
+**Request Configuration**:
+```javascript
+{
+  url: 'https://www.strava.com/api/v3/athlete/activities',
+  qs: {
+    per_page: 200,     // Maximum activities per request
+    page: 1            // Pagination starting point
+  },
+  headers: {
+    Authorization: `Bearer ${accessToken}`
+  },
+  useQuerystring: true
+}
+```
+
+**Pagination Strategy**:
+- **Incremental Sync**: Fetch 200 most recent activities (1 page)
+- **Full Sync**: Continue pagination until no more activities returned
+- **Concurrency**: Process 5 activities simultaneously for database operations
+
+**Rate Limiting Compliance**:
+- Strava Rate Limits: 100 requests per 15 minutes, 1000 requests per day
+- Current implementation: Sequential page requests, controlled concurrency for processing
+- No explicit rate limiting logic (relies on natural request spacing)
+
+#### 5.1.3 Activity Data Structure
+
+**Strava API Response Fields Used**:
+```javascript
+{
+  id: number,                    // Unique activity identifier
+  athlete: { id: number },       // Athlete information
+  name: string,                  // Activity title
+  distance: number,              // Distance in meters
+  moving_time: number,           // Moving time in seconds
+  elapsed_time: number,          // Total time in seconds
+  total_elevation_gain: number,  // Elevation gain in meters
+  elev_high: number,            // Highest elevation in meters
+  elev_low: number,             // Lowest elevation in meters
+  type: string,                 // Activity type ('Ride', 'VirtualRide', etc.)
+  start_date_local: string,     // ISO 8601 format with timezone
+  achievement_count: number,     // Number of achievements
+  pr_count: number,             // Number of personal records
+  trainer: boolean,             // Indoor trainer flag
+  commute: boolean,             // Commute activity flag
+  gear_id: string,              // Equipment identifier
+  average_speed: number,        // Average speed in m/s
+  max_speed: number,           // Maximum speed in m/s
+  average_cadence: number,      // Average cadence in RPM
+  average_temp: number,         // Average temperature in Celsius
+  average_watts: number,        // Average power in watts
+  max_watts: number,           // Maximum power in watts
+  weighted_average_watts: number, // Normalized power
+  kilojoules: number,          // Energy expenditure
+  device_watts: boolean,       // Power meter data flag
+  average_heartrate: number,   // Average heart rate in BPM
+  max_heartrate: number,       // Maximum heart rate in BPM
+  suffer_score: number         // Strava's relative effort metric
+}
+```
+
+**Data Transformation Requirements**:
+- Date format conversion: Remove 'Z' suffix from `start_date_local`
+- Null handling: Default values for missing fields
+- Field mapping: Strava API names to database column names
+- Unit preservation: Store in original Strava units (meters, seconds, etc.)
+
+#### 5.1.4 Error Handling
+
+**OAuth Errors**:
+- Token expiration: Automatic refresh attempt
+- Invalid refresh token: Manual re-authorization required
+- API rate limits: No current handling (needs implementation)
+
+**API Request Errors**:
+- Network failures: No retry logic implemented
+- Malformed responses: Basic JSON parsing error handling
+- Missing data fields: Null/default value assignment
+
+**Database Errors**:
+- Duplicate activities: Handled by upsert pattern
+- Constraint violations: Basic error logging
+
+#### 5.1.5 Current Limitations
+
+**Rate Limiting**:
+- No proactive rate limit handling
+- No backoff strategies for rate limit violations
+- No request queuing for large syncs
+
+**Error Recovery**:
+- No automatic retry mechanisms
+- Limited error logging and monitoring
+- No partial sync recovery (all-or-nothing approach)
+
+**Scalability**:
+- Single-threaded activity processing
+- No database connection pooling optimization
+- No caching of processed data
+
+### 5.2 Consumer Application Integration
+
+#### 5.2.1 Desktop Widget Integration
+
+**Target Application**: Übersicht (macOS desktop widgets)
+
+**API Consumption Pattern**:
+- Direct HTTP requests to API endpoints
+- JSON response parsing for display
+- Scheduled refresh (e.g., every 30 minutes)
+
+**Required Endpoints**:
+- `GET /v1/reports/cycling/progress/:userId` - Current vs previous year stats
+- `GET /v1/reports/cycling/yearly/:userId` - Historical yearly data
+
+**Response Format Requirements**:
+- Consistent JSON structure
+- Numeric values ready for display (pre-converted units)
+- Error handling for offline/unavailable API
+
+#### 5.2.2 Dashboard Integration
+
+**Web Dashboard Requirements**:
+- REST API consumption
+- Real-time or near-real-time data updates
+- Chart and graph data visualization
+
+**Data Refresh Strategy**:
+- Manual refresh triggers
+- Scheduled background sync
+- Cache-aware requests
+
+### 5.3 Database Integration
+
+#### 5.3.1 Current MySQL Implementation
+
+**Connection Management**:
+- Sails.js ORM with MySQL adapter
+- Single database connection
+- Automatic schema management
+
+**Query Patterns**:
+- ORM operations for CRUD activities
+- Native SQL for complex reporting queries
+- Manual transaction management
+
+**Schema Management**:
+- Sails.js automatic migration system
+- Manual schema updates for new fields
+
+#### 5.3.2 Required Migration Considerations
+
+**Data Preservation**:
+- All existing activity data must be preserved
+- User token information must be migrated
+- Relationships and constraints must be maintained
+
+**Performance Requirements**:
+- Sub-200ms response times for report queries
+- Efficient indexing for date range and athlete filtering
+- Optimized aggregation queries for yearly reports
+
+### 5.4 Configuration Integration
+
+#### 5.4.1 Environment Configuration
+
+**Required Environment Variables**:
+```bash
+# Strava API credentials
+STRAVA_CLIENT_ID=your_strava_app_id
+STRAVA_CLIENT_SECRET=your_strava_app_secret
+
+# Database connection
+DATABASE_URL=mysql://user:pass@host:port/database
+
+# Application settings
+NODE_ENV=production|development
+PORT=3000
+```
+
+#### 5.4.2 User Configuration
+
+**Current User Setup** (must be preserved):
+```javascript
+// Each user requires configuration in application config
+sails.config.users = {
+  'brandon': {
+    athleteId: 12345,           // For database query filtering
+    refreshToken: 'abcdef123'   // For OAuth token refresh
+  }
+};
+```
+
+**Requirements for Modernization**:
+- Move user configuration to database
+- Support dynamic user registration
+- Maintain backward compatibility during transition
 
 ## 6. Implementation Roadmap
 
