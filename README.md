@@ -13,6 +13,21 @@ The PRD includes:
 - Security improvements and performance optimizations
 - 16-week implementation roadmap
 
+## 🤖 AI Modernization Prompt
+
+**📄 [AI Prompt File](./AI_PROMPT.md)** - Concise, AI-ready specification for auto-generating a modernized solution.
+
+This 1,358-word prompt contains:
+- ✅ **All critical API endpoints** with exact request/response formats
+- ✅ **Complete Strava integration** requirements (OAuth, data sync, token management)
+- ✅ **Comprehensive data models** (25+ Activity fields, User model)
+- ✅ **Essential calculations** (unit conversions, Pacific timezone, aggregations)
+- ✅ **Modern tech stack** recommendations (Node.js 22, Express/Fastify, PostgreSQL/Prisma)
+- ✅ **Security & performance** requirements (JWT, < 200ms responses, vulnerability fixes)
+- ✅ **Real API examples** for validation
+
+**Usage**: Copy the entire `AI_PROMPT.md` file content and paste it into any AI tool (Claude, ChatGPT, etc.) to generate a modern replacement that preserves all functionality while eliminating 140+ security vulnerabilities from the current outdated stack.
+
 ## API
 
 * `/v1/ingest/:userId[?getAll=true]`
