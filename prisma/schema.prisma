@@ -1,0 +1,47 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           Int     @id @default(autoincrement())
+  name         String
+  accessToken  String
+  refreshToken String?
+  expiresAt    Int?
+}
+
+model Activity {
+  id                   Int       @id
+  athleteId            Int?
+  name                 String?
+  distance             Float?
+  movingTime           Int?
+  elapsedTime          Int?
+  totalElevationGain   Float?
+  elevationHigh        Float?
+  elevationLow         Float?
+  activityType         String?
+  startDate            DateTime?
+  achievementCount     Int?
+  prCount              Int?
+  trainer              Boolean?
+  commute              Boolean?
+  gear                 String?
+  averageSpeed         Float?
+  maxSpeed             Float?
+  averageCadence       Float?
+  averageTemperature   Float?
+  averageWatts         Float?
+  maxWatts             Int?
+  weightedAverageWatts Int?
+  kilojoules           Float?
+  deviceWatts          Boolean?
+  averageHeartRate     Float?
+  maxHeartRate         Int?
+  sufferScore          Int       @default(0)
+}
