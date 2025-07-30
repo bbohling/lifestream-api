@@ -1,0 +1,90 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String     @unique // User identifier (e.g., "brandon")
+  athleteId    BigInt     @unique // Strava athlete ID for queries
+  accessToken  String // OAuth access token
+  refreshToken String // OAuth refresh token
+  expiresAt    Int // Token expiration (Unix timestamp)
+  lastSyncAt   DateTime? // Last successful sync timestamp for incremental updates
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  activities   Activity[]
+
+  @@map("users")
+}
+
+model Activity {
+  id                   BigInt   @id // Strava activity ID (primary key)
+  athleteId            BigInt // Links to user
+  name                 String   @default("") // Activity title
+  distance             Float? // Distance in meters
+  movingTime           Int? // Moving time in seconds
+  elapsedTime          Int? // Total time in seconds
+  totalElevationGain   Float? // Elevation gain in meters
+  elevationHigh        Float? // Highest elevation in meters
+  elevationLow         Float? // Lowest elevation in meters
+  activityType         String // 'Ride', 'VirtualRide', 'Run', etc.
+  startDate            DateTime // Activity start time
+  achievementCount     Int? // Number of achievements
+  prCount              Int? // Number of personal records
+  trainer              Boolean  @default(false) // Indoor trainer flag
+  commute              Boolean  @default(false) // Commute activity flag
+  gear                 String? // Equipment ID
+  averageSpeed         Float? // Average speed in m/s
+  maxSpeed             Float? // Maximum speed in m/s
+  averageCadence       Float? // Average cadence in RPM
+  averageTemperature   Float? // Average temperature in Celsius
+  averageWatts         Float? // Average power in watts
+  maxWatts             Int? // Maximum power in watts
+  weightedAverageWatts Int? // Weighted average power
+  kilojoules           Float? // Energy expenditure
+  deviceWatts          Boolean? // Power meter data flag
+  averageHeartRate     Float? // Average HR in BPM
+  maxHeartRate         Int? // Maximum HR in BPM
+  sufferScore          Int      @default(0) // Strava relative effort
+  segmentEfforts       String?  @default("[]") // JSON array of segment efforts with KOM/PR data
+  komCount             Int      @default(0) // Number of KOMs (King of the Mountain) achieved
+  bestKomRank          Int? // Best KOM rank achieved in this activity (lower is better)
+  bestPrRank           Int? // Best PR rank achieved in this activity (lower is better)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user        User         @relation(fields: [athleteId], references: [athleteId])
+  rawActivity RawActivity?
+
+  @@index([athleteId])
+  @@index([startDate])
+  @@index([activityType])
+  @@index([athleteId, activityType])
+  @@index([athleteId, startDate])
+  @@index([komCount])
+  @@index([bestKomRank])
+  @@index([athleteId, komCount])
+  @@map("activities")
+}
+
+model RawActivity {
+  activityId BigInt   @id // Links to Activity table
+  rawData    String // Complete Strava API response for future data mining
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@map("raw_activities")
+}
