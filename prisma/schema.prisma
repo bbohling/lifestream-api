@@ -122,3 +122,30 @@ model BulkSyncSummaries {
   @@index([userId])
   @@map("bulk_sync_summaries")
 }
+
+model RateLimitLog {
+  id                    String   @id @default(uuid())
+  timestamp             DateTime @default(now())
+  endpoint              String   // The API endpoint called
+  // Overall limits (all endpoints)
+  overallLimit15min     Int      // Overall 15-minute limit
+  overallLimitDaily     Int      // Overall daily limit  
+  overallUsage15min     Int      // Overall 15-minute usage
+  overallUsageDaily     Int      // Overall daily usage
+  // Read limits (non-upload endpoints)
+  readLimit15min        Int      // Read 15-minute limit
+  readLimitDaily        Int      // Read daily limit
+  readUsage15min        Int      // Read 15-minute usage
+  readUsageDaily        Int      // Read daily usage
+  // Calculated utilization percentages
+  maxUtilizationPercent Float    // Highest utilization across all limits
+  delayAppliedMs        Int      @default(0) // Delay applied due to rate limiting
+  wasRateLimited        Boolean  @default(false) // Whether this request was rate limited (429)
+  retryAfterMs          Int?     // Retry-after value if rate limited
+
+  @@index([timestamp])
+  @@index([endpoint])
+  @@index([overallUsageDaily])
+  @@index([readUsageDaily])
+  @@map("rate_limit_logs")
+}

@@ -1,5 +1,8 @@
 import { logger } from '../utils/logger.js';
 import { conversions } from '../utils/calculations.js';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 /**
  * Strava API Service
@@ -201,6 +204,56 @@ export class StravaService {
   }
 
   /**
+   * Log rate limit data to database for monitoring and analytics
+   */
+  async logRateLimit(endpoint, delayApplied = 0, wasRateLimited = false, retryAfter = null) {
+    try {
+      const state = this.rateLimitState;
+      
+      // Calculate utilization percentages
+      const overallUtil15min = (state.overall.usage15min / state.overall.limit15min) * 100;
+      const overallUtilDaily = (state.overall.usageDaily / state.overall.limitDaily) * 100;
+      const readUtil15min = (state.read.usage15min / state.read.limit15min) * 100;
+      const readUtilDaily = (state.read.usageDaily / state.read.limitDaily) * 100;
+      
+      const maxUtilization = Math.max(overallUtil15min, overallUtilDaily, readUtil15min, readUtilDaily);
+
+      await prisma.rateLimitLog.create({
+        data: {
+          endpoint,
+          // Overall limits
+          overallLimit15min: state.overall.limit15min,
+          overallLimitDaily: state.overall.limitDaily,
+          overallUsage15min: state.overall.usage15min,
+          overallUsageDaily: state.overall.usageDaily,
+          // Read limits
+          readLimit15min: state.read.limit15min,
+          readLimitDaily: state.read.limitDaily,
+          readUsage15min: state.read.usage15min,
+          readUsageDaily: state.read.usageDaily,
+          // Analytics
+          maxUtilizationPercent: Math.round(maxUtilization * 100) / 100, // Round to 2 decimal places
+          delayAppliedMs: delayApplied,
+          wasRateLimited,
+          retryAfterMs: retryAfter,
+        },
+      });
+
+      // Log significant usage milestones for visibility
+      if (state.read.usageDaily >= 2500) {
+        logger.warn(`🚨 Critical: ${state.read.usageDaily}/${state.read.limitDaily} daily read requests used (${Math.round(readUtilDaily)}%)`);
+      } else if (state.read.usageDaily >= 2000) {
+        logger.warn(`⚠️  High usage: ${state.read.usageDaily}/${state.read.limitDaily} daily read requests used (${Math.round(readUtilDaily)}%)`);
+      } else if (state.read.usageDaily >= 1500) {
+        logger.info(`📊 Moderate usage: ${state.read.usageDaily}/${state.read.limitDaily} daily read requests used (${Math.round(readUtilDaily)}%)`);
+      }
+    } catch (error) {
+      // Don't let rate limit logging break the main functionality
+      logger.error('Failed to log rate limit data:', error.message);
+    }
+  }
+
+  /**
    * Check if token is expired
    */
   isTokenExpired(expiresAt) {
@@ -271,6 +324,9 @@ export class StravaService {
    * Make authenticated request to Strava API with rate limiting
    */
   async makeRequest(endpoint, accessToken, options = {}) {
+    // Calculate delay applied before making request
+    const delayApplied = this.calculateRateLimitDelay();
+    
     // Apply rate limiting before making request
     await this.applyRateLimit();
 
@@ -283,6 +339,9 @@ export class StravaService {
       ...options,
     };
 
+    let wasRateLimited = false;
+    let retryAfter = null;
+
     try {
       const response = await fetch(url, config);
 
@@ -292,10 +351,16 @@ export class StravaService {
       if (!response.ok) {
         if (response.status === 429) {
           // Rate limited - extract info from headers and wait
-          const retryAfter = response.headers.get('retry-after');
-          const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 60000; // Default 1 minute
+          wasRateLimited = true;
+          const retryAfterHeader = response.headers.get('retry-after');
+          const waitTime = retryAfterHeader ? parseInt(retryAfterHeader) * 1000 : 60000; // Default 1 minute
+          retryAfter = waitTime;
 
           logger.warn(`Rate limited (429). Waiting ${waitTime}ms before retry`);
+          
+          // Log the rate limit event
+          await this.logRateLimit(endpoint, delayApplied, wasRateLimited, retryAfter);
+          
           await new Promise((resolve) => setTimeout(resolve, waitTime));
 
           // Retry the request once
@@ -306,6 +371,9 @@ export class StravaService {
         const errorText = await response.text();
         throw new Error(`Strava API error: ${response.status} ${errorText}`);
       }
+
+      // Log successful request with rate limit data
+      await this.logRateLimit(endpoint, delayApplied, wasRateLimited, retryAfter);
 
       return await response.json();
     } catch (error) {
