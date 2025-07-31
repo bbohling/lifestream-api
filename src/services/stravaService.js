@@ -38,6 +38,11 @@ export class StravaService {
     if (process.env.NODE_ENV === 'production' && (!this.clientId || !this.clientSecret)) {
       throw new Error('Strava client ID and secret must be configured');
     }
+
+    // Warn about placeholder values
+    if (this.clientId === 'your_strava_client_id' || this.clientSecret === 'your_strava_client_secret') {
+      logger.warn('Strava credentials appear to be placeholder values. Please update your .env file.');
+    }
   }
 
   /**
@@ -208,6 +213,15 @@ export class StravaService {
    */
   async refreshToken(refreshToken) {
     try {
+      // Check if credentials are configured
+      if (!this.clientId || !this.clientSecret) {
+        throw new Error('Strava client credentials not configured. Please check your .env file.');
+      }
+
+      if (this.clientId === 'your_strava_client_id' || this.clientSecret === 'your_strava_client_secret') {
+        throw new Error('Strava credentials are still placeholder values. Please update your .env file with actual credentials from https://www.strava.com/settings/api');
+      }
+
       const response = await fetch(this.oauthUrl, {
         method: 'POST',
         headers: {
@@ -223,7 +237,20 @@ export class StravaService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Token refresh failed: ${response.status} ${errorText}`);
+        let errorMessage = `Token refresh failed: ${response.status} ${errorText}`;
+        
+        // Provide helpful error messages for common issues
+        if (response.status === 400) {
+          const errorData = JSON.parse(errorText);
+          if (errorData.errors?.some(e => e.field === 'client_id' && e.code === 'invalid')) {
+            errorMessage += '\n\n🔧 This usually means:\n';
+            errorMessage += '1. Your STRAVA_CLIENT_ID is incorrect or missing\n';
+            errorMessage += '2. You need to create a Strava API application at https://www.strava.com/settings/api\n';
+            errorMessage += '3. Update your .env file with the correct Client ID and Client Secret';
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

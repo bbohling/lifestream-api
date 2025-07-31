@@ -16,7 +16,13 @@
     "prisma:reset": "prisma migrate reset --force",
     "prisma:deploy": "prisma migrate deploy",
     "retransform:all": "node scripts/retransform-activities.js all",
-    "retransform:user": "node scripts/retransform-activities.js user"
+    "retransform:user": "node scripts/retransform-activities.js user",
+    "bulksync:start": "node scripts/bulksync.js start",
+    "bulksync:resume": "node scripts/bulksync.js resume",
+    "bulksync:status": "node scripts/bulksync.js status",
+    "bulksync:reset": "node scripts/bulksync.js reset",
+    "bulksync:overview": "node scripts/bulksync.js overview",
+    "setup:verify": "node scripts/verify-setup.js"
   },
   "keywords": [
     "strava",

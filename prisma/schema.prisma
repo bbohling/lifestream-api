@@ -82,9 +82,43 @@ model RawActivity {
   activityId BigInt   @id // Links to Activity table
   rawData    String // Complete Strava API response for future data mining
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt  DateTime @default(now()) @updatedAt
 
   activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
   @@map("raw_activities")
+}
+
+model BulkSyncState {
+  id                    String    @id @default(uuid())
+  userId                String    @unique // Links to user name
+  athleteId             BigInt    // Strava athlete ID for reference
+  status                String    @default("pending") // pending, running, paused, complete, error
+  phase                 String    @default("summary_fetch") // summary_fetch, detail_fetch, complete
+  totalActivities       Int       @default(0) // Total activities found
+  processedActivities   Int       @default(0) // Activities with full details processed
+  processedSummaries    Int       @default(0) // Summary records processed
+  requestsUsedToday     Int       @default(0) // API requests used today
+  currentPage           Int       @default(1) // Current pagination page for summaries
+  processedActivityIds  String    @default("[]") // JSON array of processed activity IDs
+  startDate             DateTime  @default(now()) // When bulk sync started
+  lastResetDate         DateTime  @default(now()) // Last daily limit reset
+  completedAt           DateTime? // When bulk sync completed
+  errorMessage          String? // Last error message if any
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now()) @updatedAt
+
+  @@map("bulk_sync_states")
+}
+
+model BulkSyncSummaries {
+  id         String   @id @default(uuid())
+  userId     String   // User identifier
+  activityId BigInt   // Strava activity ID
+  summaryData String  // JSON of activity summary
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, activityId])
+  @@index([userId])
+  @@map("bulk_sync_summaries")
 }
