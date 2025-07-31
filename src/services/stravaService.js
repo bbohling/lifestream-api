@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger.js';
+import { conversions } from '../utils/calculations.js';
 
 /**
  * Strava API Service
@@ -481,7 +482,8 @@ export class StravaService {
         achievements: effort.achievements || [],
         elapsedTime: effort.elapsed_time,
         movingTime: effort.moving_time,
-        distance: effort.distance,
+        // Convert distance from meters to miles for consistency
+        distance: effort.distance ? conversions.metersToMiles(effort.distance) : null,
         startIndex: effort.start_index,
         endIndex: effort.end_index,
       })) || [];
@@ -508,12 +510,14 @@ export class StravaService {
         id: BigInt(activity.id),
         athleteId: BigInt(activity.athlete?.id || activity.athlete_id),
         name: activity.name || '',
-        distance: activity.distance,
+        // Convert distance from meters to miles
+        distance: activity.distance ? conversions.metersToMiles(activity.distance) : null,
         movingTime: activity.moving_time,
         elapsedTime: activity.elapsed_time,
-        totalElevationGain: activity.total_elevation_gain,
-        elevationHigh: activity.elev_high,
-        elevationLow: activity.elev_low,
+        // Convert elevation from meters to feet
+        totalElevationGain: activity.total_elevation_gain ? conversions.metersToFeet(activity.total_elevation_gain) : null,
+        elevationHigh: activity.elev_high ? conversions.metersToFeet(activity.elev_high) : null,
+        elevationLow: activity.elev_low ? conversions.metersToFeet(activity.elev_low) : null,
         activityType: activity.type,
         startDate: new Date(activity.start_date_local?.replace('Z', '') || activity.start_date),
         achievementCount: activity.achievement_count,
@@ -521,10 +525,12 @@ export class StravaService {
         trainer: activity.trainer || false,
         commute: activity.commute || false,
         gear: activity.gear_id || null,
-        averageSpeed: activity.average_speed,
-        maxSpeed: activity.max_speed,
+        // Convert speed from m/s to mph
+        averageSpeed: activity.average_speed ? conversions.mpsToMph(activity.average_speed) : null,
+        maxSpeed: activity.max_speed ? conversions.mpsToMph(activity.max_speed) : null,
         averageCadence: activity.average_cadence,
-        averageTemperature: activity.average_temp,
+        // Convert temperature from Celsius to Fahrenheit
+        averageTemperature: activity.average_temp ? conversions.celsiusToFahrenheit(activity.average_temp) : null,
         averageWatts: activity.average_watts,
         maxWatts: activity.max_watts,
         weightedAverageWatts: activity.weighted_average_watts,

@@ -14,7 +14,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:reset": "prisma migrate reset --force",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:deploy": "prisma migrate deploy",
+    "retransform:all": "node scripts/retransform-activities.js all",
+    "retransform:user": "node scripts/retransform-activities.js user"
   },
   "keywords": [
     "strava",

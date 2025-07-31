@@ -138,7 +138,7 @@ describe('Integration Tests - Raw Data Separation', () => {
 
     expect(activities).toHaveLength(1);
     expect(activities[0].name).toBe('Updated Test Ride');
-    expect(activities[0].distance).toBe(12000);
+    expect(activities[0].distance).toBe(7.456472839797682); // 12000 meters converted to miles
     expect(activities[0].komCount).toBe(0); // No KOMs this time
 
     // Verify raw data was also updated

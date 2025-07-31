@@ -243,7 +243,7 @@ describe('StravaService Refactoring', () => {
         achievements: ['pr'],
         elapsedTime: 420,
         movingTime: 415,
-        distance: 1500,
+        distance: 0.9320591049747102, // 1500 meters converted to miles
         startIndex: 150,
         endIndex: 300,
       });
@@ -258,7 +258,7 @@ describe('StravaService Refactoring', () => {
         achievements: [],
         elapsedTime: 680,
         movingTime: 675,
-        distance: 2500,
+        distance: 1.5534318416245169, // 2500 meters converted to miles
         startIndex: 400,
         endIndex: 600,
       });

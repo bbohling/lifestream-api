@@ -14,7 +14,7 @@ datasource db {
 }
 
 model User {
-  id           String     @id @default(cuid())
+  id           String     @id @default(uuid())
   name         String     @unique // User identifier (e.g., "brandon")
   athleteId    BigInt     @unique // Strava athlete ID for queries
   accessToken  String // OAuth access token
@@ -22,7 +22,7 @@ model User {
   expiresAt    Int // Token expiration (Unix timestamp)
   lastSyncAt   DateTime? // Last successful sync timestamp for incremental updates
   createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  updatedAt    DateTime   @default(now()) @updatedAt
   activities   Activity[]
 
   @@map("users")
