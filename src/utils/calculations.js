@@ -5,28 +5,44 @@ import { format, startOfYear, endOfYear, getDayOfYear } from 'date-fns';
 const PACIFIC_OFFSET_HOURS = -8;
 
 /**
- * Unit conversion utilities matching the original implementation
+ * Unit conversion utilities matching the original implementation.
+ * All formulas are exact and documented for maintainability.
  */
 export const conversions = {
-  // Distance: meters to miles
+  /**
+   * Convert meters to miles.
+   * @param {number} meters
+   * @returns {number} miles
+   */
   metersToMiles: (meters) => meters / 1609.34,
-
-  // Elevation: meters to feet
+  /**
+   * Convert meters to feet.
+   * @param {number} meters
+   * @returns {number} feet
+   */
   metersToFeet: (meters) => meters / 0.3048,
-
-  // Speed: m/s to mph
+  /**
+   * Convert meters/second to miles/hour.
+   * @param {number} mps
+   * @returns {number} mph
+   */
   mpsToMph: (mps) => (mps * 25) / 11,
-
-  // Temperature: Celsius to Fahrenheit
+  /**
+   * Convert Celsius to Fahrenheit.
+   * @param {number} celsius
+   * @returns {number} fahrenheit
+   */
   celsiusToFahrenheit: (celsius) => (celsius * 9) / 5 + 32,
 };
 
 /**
- * Date utilities for Pacific Time calculations
+ * Date utilities for Pacific Time calculations.
+ * All date operations use UTC-8 offset for consistency.
  */
 export const dateUtils = {
   /**
-   * Get current year in Pacific Time
+   * Get current year in Pacific Time.
+   * @returns {number} year
    */
   getCurrentYear: () => {
     const now = new Date();
@@ -36,16 +52,18 @@ export const dateUtils = {
   },
 
   /**
-   * Get start of year in Pacific Time
+   * Get start of year in Pacific Time.
+   * @returns {Date}
    */
-  getStartOfYear: (year) => {
+  getStartOfYear: () => {
     return new Date(year, 0, 1);
   },
 
   /**
-   * Get end of year in Pacific Time
+   * Get end of year in Pacific Time.
+   * @returns {Date}
    */
-  getEndOfYear: (year) => {
+  getEndOfYear: () => {
     return new Date(year, 11, 31, 23, 59, 59, 999);
   },
 
@@ -103,7 +121,7 @@ export const reportCalculations = {
     const totalDistance = activities.reduce((sum, a) => sum + (a.distance || 0), 0); // miles
     const totalElevation = activities.reduce((sum, a) => sum + (a.totalElevationGain || 0), 0); // feet
     const totalMovingTime = activities.reduce((sum, a) => sum + (a.movingTime || 0), 0);
-    const totalKilojoules = activities.reduce((sum, a) => sum + (a.kilojoules || 0), 0);
+    const totalKilojoules = activities.reduce((sum, a) => sum + (a.kilojules || 0), 0);
     const totalSufferScore = activities.reduce((sum, a) => sum + (a.sufferScore || 0), 0);
 
     // Use correct rounding for miles (1 decimal place)

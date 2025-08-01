@@ -6,16 +6,22 @@ const prisma = new PrismaClient();
 
 /**
  * Strava API Service
- * Handles OAuth token management and API calls to Strava with rate limiting
+ * Handles OAuth token management, API calls to Strava, and rate limit logging.
+ * All API calls should check token expiration and refresh automatically.
+ * All errors are logged with context using the custom logger.
  */
 export class StravaService {
+  /**
+   * Initialize StravaService with base URLs, credentials, and rate limit state.
+   * @constructor
+   */
   constructor() {
     this.baseUrl = 'https://www.strava.com/api/v3';
     this.oauthUrl = 'https://www.strava.com/oauth/token';
     this.clientId = process.env.STRAVA_CLIENT_ID;
     this.clientSecret = process.env.STRAVA_CLIENT_SECRET;
 
-    // Rate limiting state
+    // Rate limiting state: tracks usage and resets for both overall and read endpoints
     this.rateLimitState = {
       // Overall limits (all endpoints)
       overall: {

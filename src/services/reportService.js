@@ -4,14 +4,18 @@ import { logger } from '../utils/logger.js';
 
 /**
  * Report Service
- * Handles cycling analytics and report generation
+ * Handles cycling analytics and report generation.
+ * All calculations use Pacific Time and already-converted units (miles, feet).
  */
 export class ReportService {
   /**
-   * Generate yearly cycling report
+   * Generate yearly cycling report for a user.
+   * @param {string|number} userId - The user identifier.
+   * @returns {Promise<Object>} Yearly report data.
    */
   async generateYearlyReport(userId) {
     try {
+      // Log operation for audit
       logger.info(`Generating yearly report for user: ${userId}`);
 
       const user = await activityService.getUserByName(userId);
@@ -25,13 +29,16 @@ export class ReportService {
         data: yearlyData,
       };
     } catch (error) {
+      // Log error with context
       logger.error(`Failed to generate yearly report for ${userId}:`, error.message);
       throw error;
     }
   }
 
   /**
-   * Generate progress comparison report (current year vs last year)
+   * Generate progress comparison report (current year vs last year).
+   * @param {string|number} userId - The user identifier.
+   * @returns {Promise<Object>} Progress report data.
    */
   async generateProgressReport(userId) {
     try {

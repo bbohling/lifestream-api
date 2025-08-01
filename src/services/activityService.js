@@ -5,12 +5,15 @@ const prisma = new PrismaClient();
 
 /**
  * Activity Service
- * Handles database operations for activities
+ * Handles database operations for activities, including upsert logic and raw data storage.
+ * All inputs should be validated with Zod schemas before calling these methods.
  */
 export class ActivityService {
   /**
    * Upsert activity (update if exists, create if not)
-   * Now handles both activity data and raw data separately
+   * Handles both activity data and raw data separately.
+   * @param {Object} transformedActivity - Contains activityData and rawData.
+   * @returns {Promise<Object>} The upserted activity record.
    */
   async upsertActivity(transformedActivity) {
     try {
@@ -34,6 +37,7 @@ export class ActivityService {
 
       return activity;
     } catch (error) {
+      // Log error with context, but do not expose sensitive details
       logger.error(
         `Failed to upsert activity ${transformedActivity.activityData?.id || 'unknown'}:`,
         error.message

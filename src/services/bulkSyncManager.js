@@ -6,10 +6,15 @@ import { logger } from '../utils/logger.js';
 const prisma = new PrismaClient();
 
 /**
- * Bulk sync manager for fetching all Strava data over multiple days
- * Respects rate limits and provides resumable progress tracking
+ * BulkSyncManager
+ * Manages bulk Strava data sync, respecting rate limits and providing resumable progress tracking.
+ * All errors are logged with context using the custom logger.
  */
 export class BulkSyncManager {
+  /**
+   * Initialize BulkSyncManager with batch size, delay, and limits.
+   * @constructor
+   */
   constructor() {
     this.dailyLimit = 1000; // Conservative limit (50 requests buffer)
     this.batchSize = 5; // Concurrent requests per batch
@@ -17,7 +22,9 @@ export class BulkSyncManager {
   }
 
   /**
-   * Reset bulk sync state and clear summaries for a fresh start
+   * Reset bulk sync state and clear summaries for a fresh start.
+   * @param {string|number} userId - The user identifier.
+   * @returns {Promise<void>}
    */
   async resetBulkSync(userId) {
     try {
@@ -33,6 +40,7 @@ export class BulkSyncManager {
 
       logger.info(`Reset bulk sync state and cleared summaries for user ${userId}`);
     } catch (error) {
+      // Log error with context
       logger.error(`Error resetting bulk sync for user ${userId}:`, error.message);
       throw error;
     }

@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-// Environment variables validation
+/**
+ * Zod schema for environment variables.
+ * Ensures all required env vars are present and valid.
+ */
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().transform(Number).pipe(z.number().min(1).max(65535)).default('3000'),
@@ -11,7 +14,10 @@ export const envSchema = z.object({
   CORS_ORIGIN: z.string().url().optional(),
 });
 
-// User data validation
+/**
+ * Zod schema for user data.
+ * Validates user fields and Strava tokens.
+ */
 export const userSchema = z.object({
   name: z.string().min(1).max(100),
   athleteId: z.bigint().positive(),
@@ -20,7 +26,10 @@ export const userSchema = z.object({
   expiresAt: z.number().int().positive(),
 });
 
-// Activity data validation
+/**
+ * Zod schema for activity data.
+ * Validates all key activity fields, including BigInt IDs and dates.
+ */
 export const activitySchema = z.object({
   id: z.bigint().positive(),
   athleteId: z.bigint().positive(),
@@ -52,7 +61,10 @@ export const activitySchema = z.object({
   sufferScore: z.number().int().nonnegative().default(0),
 });
 
-// Request parameter validation
+/**
+ * Zod schema for request parameters.
+ * Validates userId and query parameters for ingestion.
+ */
 export const userIdSchema = z.object({
   userId: z.string().min(1),
 });
