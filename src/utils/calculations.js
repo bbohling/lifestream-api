@@ -99,13 +99,15 @@ export const reportCalculations = {
    * Calculate progress report metrics for a set of activities
    */
   calculateProgressMetrics: (activities, dayOfYear) => {
-    const totalDistance = activities.reduce((sum, a) => sum + (a.distance || 0), 0);
-    const totalElevation = activities.reduce((sum, a) => sum + (a.totalElevationGain || 0), 0);
+    // Distance and elevation are already in miles and feet
+    const totalDistance = activities.reduce((sum, a) => sum + (a.distance || 0), 0); // miles
+    const totalElevation = activities.reduce((sum, a) => sum + (a.totalElevationGain || 0), 0); // feet
     const totalMovingTime = activities.reduce((sum, a) => sum + (a.movingTime || 0), 0);
     const totalKilojoules = activities.reduce((sum, a) => sum + (a.kilojoules || 0), 0);
     const totalSufferScore = activities.reduce((sum, a) => sum + (a.sufferScore || 0), 0);
 
-    const miles = Math.ceil(conversions.metersToMiles(totalDistance));
+    // Use correct rounding for miles (1 decimal place)
+    const miles = Math.round(totalDistance * 10) / 10;
     const daysRidden = dateUtils.getUniqueDates(activities).length;
     const rides = activities.length;
 
@@ -115,10 +117,10 @@ export const reportCalculations = {
       miles,
       rideAverage: rides > 0 ? Math.round((miles / rides) * 10) / 10 : 0,
       dailyAverage: dayOfYear > 0 ? Math.round((miles / dayOfYear) * 10) / 10 : 0,
-      percentageOfDays: dayOfYear > 0 ? Math.round((daysRidden / dayOfYear) * 100) : 0,
-      climbing: Math.ceil(conversions.metersToFeet(totalElevation)),
-      calories: Math.ceil(totalKilojoules),
-      movingTimeMinutes: Math.ceil(totalMovingTime / 60),
+      percentageOfDays: dayOfYear > 0 ? Math.floor((daysRidden / dayOfYear) * 100) : 0,
+      climbing: Math.round(totalElevation),
+      calories: Math.round(totalKilojoules),
+      movingTimeMinutes: Math.round(totalMovingTime / 60),
       averageSufferScore: rides > 0 ? Math.round(totalSufferScore / rides) : 0,
     };
   },
