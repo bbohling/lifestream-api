@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
  */
 export class BulkSyncManager {
   constructor() {
-    this.dailyLimit = 950; // Conservative limit (50 requests buffer)
+    this.dailyLimit = 1000; // Conservative limit (50 requests buffer)
     this.batchSize = 5; // Concurrent requests per batch
     this.delayBetweenBatches = 2000; // 2 seconds between batches
   }
