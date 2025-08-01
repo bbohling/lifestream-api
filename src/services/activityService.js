@@ -114,11 +114,9 @@ export class ActivityService {
       const results = Object.entries(yearlyData).map(([year, data]) => {
         const { activities: yearActivities, dates } = data;
 
-        const totalDistance = yearActivities.reduce((sum, a) => sum + (a.distance || 0), 0);
-        const totalElevation = yearActivities.reduce(
-          (sum, a) => sum + (a.totalElevationGain || 0),
-          0
-        );
+        // Distance and elevation are already in miles and feet
+        const totalDistance = yearActivities.reduce((sum, a) => sum + (a.distance || 0), 0); // miles
+        const totalElevation = yearActivities.reduce((sum, a) => sum + (a.totalElevationGain || 0), 0); // feet
         const totalMovingTime = yearActivities.reduce((sum, a) => sum + (a.movingTime || 0), 0);
         const totalKilojoules = yearActivities.reduce((sum, a) => sum + (a.kilojoules || 0), 0);
         const totalSufferScore = yearActivities.reduce((sum, a) => sum + (a.sufferScore || 0), 0);
@@ -127,9 +125,9 @@ export class ActivityService {
           year: parseInt(year),
           totalRides: yearActivities.length,
           rideDays: dates.size,
-          miles: Math.round(totalDistance / 1609.34),
+          miles: Math.round(totalDistance * 10) / 10,
           hours: Math.round(totalMovingTime / 3600),
-          climbing: Math.round(totalElevation / 0.3048),
+          climbing: Math.round(totalElevation),
           calories: Math.round(totalKilojoules),
           avgSufferScore:
             yearActivities.length > 0 ? Math.round(totalSufferScore / yearActivities.length) : 0,
