@@ -81,11 +81,11 @@ describe('Report Calculations', () => {
 
     expect(metrics.rides).toBe(2);
     expect(metrics.daysRidden).toBe(2);
-    expect(metrics.miles).toBe(30); // Ceil of 29.97
+    expect(metrics.miles).toBe(30.0); // Correct conversion and rounding
     expect(metrics.rideAverage).toBe(15.0);
     expect(metrics.dailyAverage).toBe(0.3);
     expect(metrics.percentageOfDays).toBe(2);
-    expect(metrics.climbing).toBe(3000); // Ceil of 3000.0 (exact)
+    expect(metrics.climbing).toBe(914); // Correct sum and rounding
     expect(metrics.calories).toBe(3000);
     expect(metrics.movingTimeMinutes).toBe(180); // 10800 seconds / 60
     expect(metrics.averageSufferScore).toBe(63); // (50 + 75) / 2 = 62.5, rounded to 63

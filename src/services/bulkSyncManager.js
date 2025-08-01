@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import stravaService from '../services/stravaService.js';
 import activityService from '../services/activityService.js';
 import { logger } from '../utils/logger.js';
+import { BULK_SYNC } from '../config.js';
 
 const prisma = new PrismaClient();
 
@@ -16,9 +17,9 @@ export class BulkSyncManager {
    * @constructor
    */
   constructor() {
-    this.dailyLimit = 1000; // Conservative limit (50 requests buffer)
-    this.batchSize = 5; // Concurrent requests per batch
-    this.delayBetweenBatches = 2000; // 2 seconds between batches
+    this.dailyLimit = BULK_SYNC.dailyLimit;
+    this.batchSize = BULK_SYNC.batchSize;
+    this.delayBetweenBatches = BULK_SYNC.delayBetweenBatches;
   }
 
   /**

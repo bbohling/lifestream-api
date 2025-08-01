@@ -1,6 +1,8 @@
 import { logger } from '../utils/logger.js';
 import { conversions } from '../utils/calculations.js';
 import { PrismaClient } from '@prisma/client';
+import { STRAVA_API_BASE_URL, STRAVA_OAUTH_URL, STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, RATE_LIMITS } from '../config.js';
+import { ApiError, ValidationError } from '../utils/errors.js';
 
 const prisma = new PrismaClient();
 
@@ -16,17 +18,17 @@ export class StravaService {
    * @constructor
    */
   constructor() {
-    this.baseUrl = 'https://www.strava.com/api/v3';
-    this.oauthUrl = 'https://www.strava.com/oauth/token';
-    this.clientId = process.env.STRAVA_CLIENT_ID;
-    this.clientSecret = process.env.STRAVA_CLIENT_SECRET;
+    this.baseUrl = STRAVA_API_BASE_URL;
+    this.oauthUrl = STRAVA_OAUTH_URL;
+    this.clientId = STRAVA_CLIENT_ID;
+    this.clientSecret = STRAVA_CLIENT_SECRET;
 
     // Rate limiting state: tracks usage and resets for both overall and read endpoints
     this.rateLimitState = {
       // Overall limits (all endpoints)
       overall: {
-        limit15min: 200,
-        limitDaily: 2000,
+        limit15min: RATE_LIMITS.overall.limit15min,
+        limitDaily: RATE_LIMITS.overall.limitDaily,
         usage15min: 0,
         usageDaily: 0,
         lastReset15min: this.getNext15MinuteReset(),
@@ -34,8 +36,8 @@ export class StravaService {
       },
       // Read limits (non-upload endpoints)
       read: {
-        limit15min: 100,
-        limitDaily: 1000,
+        limit15min: RATE_LIMITS.read.limit15min,
+        limitDaily: RATE_LIMITS.read.limitDaily,
         usage15min: 0,
         usageDaily: 0,
         lastReset15min: this.getNext15MinuteReset(),

@@ -1,8 +1,5 @@
 import { format, startOfYear, endOfYear, getDayOfYear } from 'date-fns';
-
-// Pacific Time zone offset (UTC-8, or UTC-7 during DST)
-// For simplicity in testing, we'll use a fixed offset
-const PACIFIC_OFFSET_HOURS = -8;
+import { PACIFIC_OFFSET_HOURS } from '../config.js';
 
 /**
  * Unit conversion utilities matching the original implementation.
@@ -117,15 +114,14 @@ export const reportCalculations = {
    * Calculate progress report metrics for a set of activities
    */
   calculateProgressMetrics: (activities, dayOfYear) => {
-    // Distance and elevation are already in miles and feet
-    const totalDistance = activities.reduce((sum, a) => sum + (a.distance || 0), 0); // miles
+    // Sum distance in meters, then convert to miles
+    const totalDistanceMeters = activities.reduce((sum, a) => sum + (a.distance || 0), 0); // meters
+    const miles = Math.round(conversions.metersToMiles(totalDistanceMeters) * 10) / 10;
     const totalElevation = activities.reduce((sum, a) => sum + (a.totalElevationGain || 0), 0); // feet
     const totalMovingTime = activities.reduce((sum, a) => sum + (a.movingTime || 0), 0);
-    const totalKilojoules = activities.reduce((sum, a) => sum + (a.kilojules || 0), 0);
+    const totalKilojoules = activities.reduce((sum, a) => sum + (a.kilojoules || 0), 0); // fixed spelling
     const totalSufferScore = activities.reduce((sum, a) => sum + (a.sufferScore || 0), 0);
 
-    // Use correct rounding for miles (1 decimal place)
-    const miles = Math.round(totalDistance * 10) / 10;
     const daysRidden = dateUtils.getUniqueDates(activities).length;
     const rides = activities.length;
 

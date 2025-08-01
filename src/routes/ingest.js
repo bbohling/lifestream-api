@@ -2,6 +2,8 @@ import express from 'express';
 import stravaService from '../services/stravaService.js';
 import activityService from '../services/activityService.js';
 import { logger } from '../utils/logger.js';
+import { activitySchema } from '../utils/validation.js';
+import { ValidationError } from '../utils/errors.js';
 
 const router = express.Router();
 
@@ -75,6 +77,23 @@ router.get('/:userId', async (req, res, next) => {
     res.json({ msg: 'success' });
   } catch (error) {
     logger.error('Ingestion error:', error.message);
+    next(error);
+  }
+});
+
+/**
+ * POST /v1/activities
+ * Upserts a single activity
+ */
+router.post('/', async (req, res, next) => {
+  try {
+    const parsed = activitySchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError('Invalid activity data');
+    }
+    const result = await activityService.upsertActivity(parsed.data);
+    res.status(200).json({ msg: 'success', data: result });
+  } catch (error) {
     next(error);
   }
 });
