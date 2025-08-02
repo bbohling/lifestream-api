@@ -607,6 +607,24 @@ export class StravaService {
       );
     }
 
+    // Extract gear info for upsert
+    let gearData = null;
+    if (activity.gear) {
+      const gear = activity.gear;
+      gearData = {
+        id: gear.id,
+        primary: gear.primary || false,
+        name: gear.name || '',
+        resourceState: gear.resource_state || 2,
+        distance: gear.distance || null,
+        brandName: gear.brand_name || null,
+        modelName: gear.model_name || null,
+        frameType: gear.frame_type || null,
+        description: gear.description || null,
+        athleteId: BigInt(activity.athlete?.id || activity.athlete_id),
+      };
+    }
+
     return {
       // Processed activity data for the main Activity table
       activityData: {
@@ -627,7 +645,7 @@ export class StravaService {
         prCount: activity.pr_count,
         trainer: activity.trainer || false,
         commute: activity.commute || false,
-        gear: activity.gear_id || null,
+        gearId: activity.gear_id || null,
         // Convert speed from m/s to mph
         averageSpeed: activity.average_speed ? conversions.mpsToMph(activity.average_speed) : null,
         maxSpeed: activity.max_speed ? conversions.mpsToMph(activity.max_speed) : null,
@@ -651,7 +669,51 @@ export class StravaService {
       },
       // Raw data for the RawActivity table
       rawData: JSON.stringify(activity),
+      gearData,
     };
+  }
+
+  /**
+   * Fetch all gear for an athlete and upsert into Gear table
+   */
+  async fetchAndUpsertAthleteGear(accessToken, athleteId) {
+    try {
+      // Fetch athlete profile (includes bikes and shoes)
+      const athlete = await this.makeRequest('/athlete', accessToken);
+      const allGear = [...(athlete.bikes || []), ...(athlete.shoes || [])];
+      for (const gear of allGear) {
+        await prisma.gear.upsert({
+          where: { id: gear.id },
+          update: {
+            id: gear.id,
+            primary: gear.primary || false,
+            name: gear.name || '',
+            resourceState: gear.resource_state || 2,
+            distance: gear.distance || null,
+            brandName: gear.brand_name || null,
+            modelName: gear.model_name || null,
+            frameType: gear.frame_type || null,
+            description: gear.description || null,
+            athleteId: BigInt(athleteId),
+          },
+          create: {
+            id: gear.id,
+            primary: gear.primary || false,
+            name: gear.name || '',
+            resourceState: gear.resource_state || 2,
+            distance: gear.distance || null,
+            brandName: gear.brand_name || null,
+            modelName: gear.model_name || null,
+            frameType: gear.frame_type || null,
+            description: gear.description || null,
+            athleteId: BigInt(athleteId),
+          },
+        });
+      }
+      logger.info(`Upserted ${allGear.length} gear records for athlete ${athleteId}`);
+    } catch (error) {
+      logger.error(`Failed to fetch/upsert gear for athlete ${athleteId}:`, error.message);
+    }
   }
 }
 

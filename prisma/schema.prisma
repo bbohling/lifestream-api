@@ -44,7 +44,7 @@ model Activity {
   prCount              Int? // Number of personal records
   trainer              Boolean  @default(false) // Indoor trainer flag
   commute              Boolean  @default(false) // Commute activity flag
-  gear                 String? // Equipment ID
+  gearId               String? // Strava gear ID
   averageSpeed         Float? // Average speed in m/s
   maxSpeed             Float? // Maximum speed in m/s
   averageCadence       Float? // Average cadence in RPM
@@ -66,6 +66,7 @@ model Activity {
 
   user        User         @relation(fields: [athleteId], references: [athleteId])
   rawActivity RawActivity?
+  gear        Gear?         @relation(fields: [gearId], references: [id])
 
   @@index([athleteId])
   @@index([startDate])
@@ -148,4 +149,21 @@ model RateLimitLog {
   @@index([overallUsageDaily])
   @@index([readUsageDaily])
   @@map("rate_limit_logs")
+}
+
+model Gear {
+  id             String   @id // Strava gear ID
+  primary        Boolean  @default(false) // Is this the athlete's primary gear?
+  name           String   // Gear name
+  resourceState  Int      // Strava resource state
+  distance       Float?   // Total distance in meters
+  brandName      String?  // Brand name
+  modelName      String?  // Model name
+  frameType      Int?     // Strava frame type (bike: 1, mtb: 2, etc)
+  description    String?  // Gear description
+  athleteId      BigInt   // Owner athlete
+  activities     Activity[]
+
+  @@index([athleteId])
+  @@map("gears")
 }

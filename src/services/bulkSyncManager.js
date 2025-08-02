@@ -166,10 +166,12 @@ export class BulkSyncManager {
    * Calculate remaining requests for today
    */
   getRemainingRequests(state) {
+    const SAFETY_LIMIT = 950; // Strava daily read limit minus buffer
+    const maxAllowed = Math.min(this.dailyLimit, SAFETY_LIMIT);
     if (this.checkDailyReset(state)) {
-      return this.dailyLimit;
+      return maxAllowed;
     }
-    return Math.max(0, this.dailyLimit - state.requestsUsedToday);
+    return Math.max(0, maxAllowed - state.requestsUsedToday);
   }
 
   /**
@@ -397,6 +399,31 @@ export class BulkSyncManager {
   }
 
   /**
+   * Bulk sync entry point: fetch gear, then activities
+   */
+  async runBulkSync(userId, accessToken) {
+    // Get user and athleteId
+    const user = await activityService.getUserByName(userId);
+    if (!user) throw new Error(`User ${userId} not found`);
+    const athleteId = user.athleteId;
+
+    // Step 1: Fetch and upsert all gear for athlete
+    await stravaService.fetchAndUpsertAthleteGear(accessToken, athleteId);
+
+    // Step 2: Proceed with normal bulk sync (summaries, details, upsert activities)
+    let state = await this.getBulkSyncState(userId);
+
+    // Determine which phase to start with
+    if (state.phase === 'summary_fetch' || state.phase === 'paused_daily_limit') {
+      return await this.fetchAllSummariesPhase(userId, accessToken);
+    } else if (state.phase === 'detail_fetch') {
+      return await this.fetchDetailsPhase(userId, accessToken);
+    }
+
+    throw new Error(`Unknown phase: ${state.phase}`);
+  }
+
+  /**
    * Resume bulk sync from where it left off
    */
   async resumeBulkSync(userId, accessToken) {
@@ -451,7 +478,7 @@ export class BulkSyncManager {
       rateLimits: {
         requestsUsedToday: state.requestsUsedToday,
         remainingToday: remainingRequests,
-        dailyLimit: this.dailyLimit,
+        dailyLimit: Math.min(this.dailyLimit, 950),
       },
       timing: {
         startDate: state.startDate,

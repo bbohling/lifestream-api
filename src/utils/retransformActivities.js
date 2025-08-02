@@ -45,7 +45,19 @@ export async function retransformAllActivities() {
           // Transform using the updated conversion logic
           const transformed = stravaService.transformActivity(stravaActivity);
 
-          // Update the activity record with the new transformed data
+          // Upsert gear if present
+          let gearId = null;
+          const { gearData } = transformed;
+          if (gearData && gearData.id) {
+            await prisma.gear.upsert({
+              where: { id: gearData.id },
+              update: gearData,
+              create: gearData,
+            });
+            gearId = gearData.id;
+          }
+
+          // Update the activity record with the new transformed data and gearId
           await prisma.activity.update({
             where: {
               id: rawActivity.activityId,
@@ -59,14 +71,12 @@ export async function retransformAllActivities() {
               averageSpeed: transformed.activityData.averageSpeed,
               maxSpeed: transformed.activityData.maxSpeed,
               averageTemperature: transformed.activityData.averageTemperature,
-              // Also update segment efforts with converted distances
               segmentEfforts: transformed.activityData.segmentEfforts,
-              // Update KOM/PR data in case the logic changed
               komCount: transformed.activityData.komCount,
               bestKomRank: transformed.activityData.bestKomRank,
               bestPrRank: transformed.activityData.bestPrRank,
-              // Update timestamp
               updatedAt: new Date(),
+              gearId: gearId,
             },
           });
 
@@ -138,6 +148,18 @@ export async function retransformUserActivities(athleteId) {
         // Transform using the updated conversion logic
         const transformed = stravaService.transformActivity(stravaActivity);
 
+        // Upsert gear if present
+        let gearId = null;
+        const { gearData } = transformed;
+        if (gearData && gearData.id) {
+          await prisma.gear.upsert({
+            where: { id: gearData.id },
+            update: gearData,
+            create: gearData,
+          });
+          gearId = gearData.id;
+        }
+
         // Update the activity record
         await prisma.activity.update({
           where: {
@@ -156,6 +178,7 @@ export async function retransformUserActivities(athleteId) {
             bestKomRank: transformed.activityData.bestKomRank,
             bestPrRank: transformed.activityData.bestPrRank,
             updatedAt: new Date(),
+            gearId: gearId,
           },
         });
 

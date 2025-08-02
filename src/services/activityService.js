@@ -17,7 +17,23 @@ export class ActivityService {
    */
   async upsertActivity(transformedActivity) {
     try {
-      const { activityData, rawData } = transformedActivity;
+      const { activityData, rawData, gearData } = transformedActivity;
+
+      // Upsert gear if present
+      let gearId = null;
+      if (gearData && gearData.id) {
+        await prisma.gear.upsert({
+          where: { id: gearData.id },
+          update: gearData,
+          create: gearData,
+        });
+        gearId = gearData.id;
+      }
+
+      // Link activity to gear
+      if (gearId) {
+        activityData.gearId = gearId;
+      }
 
       const activity = await prisma.activity.upsert({
         where: { id: activityData.id },
@@ -91,6 +107,18 @@ export class ActivityService {
           totalElevationGain: true,
           kilojoules: true,
           sufferScore: true,
+          gear: {
+            select: {
+              id: true,
+              name: true,
+              brandName: true,
+              modelName: true,
+              frameType: true,
+              description: true,
+              distance: true,
+              primary: true,
+            },
+          },
         },
         orderBy: {
           startDate: 'asc',

@@ -139,3 +139,12 @@ export const reportCalculations = {
     };
   },
 };
+
+/**
+ * Convert seconds to hours (float)
+ * @param {number} seconds
+ * @returns {number} hours
+ */
+export function secondsToHours(seconds) {
+  return seconds / 3600;
+}

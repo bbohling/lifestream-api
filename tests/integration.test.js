@@ -152,4 +152,63 @@ describe('Integration Tests - Raw Data Separation', () => {
     expect(parsedRawData.distance).toBe(12000);
     expect(parsedRawData.segment_efforts).toHaveLength(0);
   });
+
+  it('should upsert gear and link to activity', async () => {
+    const gearId = 'test-gear-123';
+    const mockStravaActivityWithGear = {
+      id: Number(testActivityId) + 1,
+      name: 'Ride with Gear',
+      type: 'Ride',
+      distance: 5000,
+      moving_time: 1000,
+      elapsed_time: 1200,
+      total_elevation_gain: 100,
+      start_date_local: '2024-01-16T08:00:00',
+      athlete: { id: Number(testAthleteId) },
+      gear_id: gearId,
+      gear: {
+        id: gearId,
+        name: 'Test Bike',
+        brand_name: 'TestBrand',
+        model_name: 'ModelX',
+        frame_type: 1,
+        description: 'A test bike',
+        distance: 12345,
+        primary: true,
+        resource_state: 2,
+      },
+      segment_efforts: [],
+      suffer_score: 10,
+    };
+
+    const transformed = StravaService.transformActivity(mockStravaActivityWithGear);
+    await ActivityService.upsertActivity(transformed);
+
+    // Verify activity is linked to gear
+    const activity = await prisma.activity.findUnique({
+      where: { id: BigInt(mockStravaActivityWithGear.id) },
+      include: { gear: true },
+    });
+    expect(activity).toBeTruthy();
+    expect(activity.gearId).toBe(gearId);
+    expect(activity.gear).toBeTruthy();
+    expect(activity.gear.name).toBe('Test Bike');
+    expect(activity.gear.brandName).toBe('TestBrand');
+    expect(activity.gear.modelName).toBe('ModelX');
+    expect(activity.gear.frameType).toBe(1);
+    expect(activity.gear.primary).toBe(true);
+    expect(activity.gear.description).toBe('A test bike');
+    expect(activity.gear.distance).toBe(12345);
+
+    // Verify gear exists in Gear table
+    const gear = await prisma.gear.findUnique({ where: { id: gearId } });
+    expect(gear).toBeTruthy();
+    expect(gear.name).toBe('Test Bike');
+    expect(gear.brandName).toBe('TestBrand');
+    expect(gear.modelName).toBe('ModelX');
+    expect(gear.frameType).toBe(1);
+    expect(gear.primary).toBe(true);
+    expect(gear.description).toBe('A test bike');
+    expect(gear.distance).toBe(12345);
+  });
 });
