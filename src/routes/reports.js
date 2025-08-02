@@ -4,6 +4,7 @@ import { logger } from '../utils/logger.js';
 import { getGearUsageReport } from '../services/gearReportService.js';
 import activityService from '../services/activityService.js';
 import { getActivityTypeBreakdown } from '../services/activityTypeReportService.js';
+import { getKomPrAchievementsOverTime } from '../services/komPrAchievementsService.js';
 
 const router = express.Router();
 
@@ -112,6 +113,30 @@ router.get('/activity-type/:userId', async (req, res, next) => {
     res.json({ msg: 'success', data: breakdown });
   } catch (err) {
     logger.error('Activity type breakdown error', err.message);
+    next(err);
+  }
+});
+
+/**
+ * GET /v1/reports/kom-pr-achievements/:userId
+ * Returns KOM/PR achievements over time for the specified user
+ */
+router.get('/kom-pr-achievements/:userId', async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ error: 'No user provided.' });
+    }
+    logger.info(`Generating KOM/PR achievements report for user: ${userId}`);
+    // Look up athleteId by user name
+    const user = await activityService.getUserByName(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const achievements = await getKomPrAchievementsOverTime(user.athleteId);
+    res.json({ msg: 'success', data: achievements });
+  } catch (err) {
+    logger.error('KOM/PR achievements report error', err.message);
     next(err);
   }
 });
