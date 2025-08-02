@@ -5,6 +5,7 @@ import { getGearUsageReport } from '../services/gearReportService.js';
 import activityService from '../services/activityService.js';
 import { getActivityTypeBreakdown } from '../services/activityTypeReportService.js';
 import { getKomPrAchievementsOverTime } from '../services/komPrAchievementsService.js';
+import { getYearOverYearProgress } from '../services/yearOverYearProgressService.js';
 
 const router = express.Router();
 
@@ -137,6 +138,30 @@ router.get('/kom-pr-achievements/:userId', async (req, res, next) => {
     res.json({ msg: 'success', data: achievements });
   } catch (err) {
     logger.error('KOM/PR achievements report error', err.message);
+    next(err);
+  }
+});
+
+/**
+ * GET /v1/reports/year-over-year/:userId
+ * Returns year-over-year progress for the specified user
+ */
+router.get('/year-over-year/:userId', async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ error: 'No user provided.' });
+    }
+    logger.info(`Generating year-over-year progress report for user: ${userId}`);
+    // Look up athleteId by user name
+    const user = await activityService.getUserByName(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const progress = await getYearOverYearProgress(user.athleteId);
+    res.json({ msg: 'success', data: progress });
+  } catch (err) {
+    logger.error('Year-over-year progress report error', err.message);
     next(err);
   }
 });

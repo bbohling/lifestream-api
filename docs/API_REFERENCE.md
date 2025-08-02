@@ -4,11 +4,35 @@
 Modern Node.js API for Strava fitness activity tracking and cycling analytics. Integrates with Strava OAuth 2.0 and provides cycling reports.
 
 ## Endpoints
-- `/ingest` — Sync Strava activities
-- `/reports` — Get cycling analytics and progress reports
-- `/koms` — Segment efforts and KOMs
-- `/bulksync` — Bulk sync status and control
-- `/retransform` — Data reprocessing
+
+### Ingest
+- `POST /v1/ingest` — Sync Strava activities
+
+### Reports
+- `GET /v1/reports/cycling/yearly/:userId` — Yearly cycling statistics grouped by year
+- `GET /v1/reports/cycling/progress/:userId` — Year-over-year comparison (current year vs same period last year)
+- `GET /v1/reports/gear-usage/:userId` — Gear usage stats for the specified user
+- `GET /v1/reports/activity-type/:userId` — Activity type breakdown for the specified user
+- `GET /v1/reports/kom-pr-achievements/:userId` — KOM/PR achievements over time for the specified user
+- `GET /v1/reports/year-over-year/:userId` — Year-over-year progress for the specified user
+- `GET /reports/gear-usage` — Gear usage stats for the authenticated user (session-based)
+
+#### Example Response
+```json
+{
+  "msg": "success",
+  "data": { ... }
+}
+```
+
+### KOMs
+- `/v1/koms` — Segment efforts and KOMs
+
+### Bulk Sync
+- `/v1/bulksync` — Bulk sync status and control
+
+### Retransform
+- `/v1/retransform` — Data reprocessing
 
 ## Request/Response Patterns
 - All endpoints return `{ msg: "success" }` for success, `{ error: "Error message" }` for errors
@@ -16,24 +40,16 @@ Modern Node.js API for Strava fitness activity tracking and cycling analytics. I
 - All inputs validated with Zod
 
 ## Units & Time
-- Distance: meters (input), miles (output)
-- Elevation: meters (input), feet (output)
-- Speed: m/s (input), mph (output)
-- Temperature: Celsius (input), Fahrenheit (output)
+- Distance: miles (output)
+- Elevation: feet (output)
+- Speed: mph (output)
+- Temperature: Fahrenheit (output)
 - All times in Pacific Time (UTC-8)
 
 ## Error Handling
 - All errors logged with context
 - User-friendly error messages
 - No sensitive data exposed
-
-## Example Response
-```json
-{
-  "msg": "success",
-  "data": { ... }
-}
-```
 
 ---
 See [Data Model](./DATA_MODEL.md) for database schema details.
