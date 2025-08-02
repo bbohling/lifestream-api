@@ -3,6 +3,7 @@ import reportService from '../services/reportService.js';
 import { logger } from '../utils/logger.js';
 import { getGearUsageReport } from '../services/gearReportService.js';
 import activityService from '../services/activityService.js';
+import { getActivityTypeBreakdown } from '../services/activityTypeReportService.js';
 
 const router = express.Router();
 
@@ -87,6 +88,30 @@ router.get('/gear-usage/:userId', async (req, res, next) => {
     res.json({ msg: 'success', data: report });
   } catch (err) {
     logger.error('Gear usage report error', err.message);
+    next(err);
+  }
+});
+
+/**
+ * GET /v1/reports/activity-type/:userId
+ * Returns activity type breakdown for the specified user
+ */
+router.get('/activity-type/:userId', async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ error: 'No user provided.' });
+    }
+    logger.info(`Generating activity type breakdown for user: ${userId}`);
+    // Look up athleteId by user name
+    const user = await activityService.getUserByName(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const breakdown = await getActivityTypeBreakdown(user.athleteId);
+    res.json({ msg: 'success', data: breakdown });
+  } catch (err) {
+    logger.error('Activity type breakdown error', err.message);
     next(err);
   }
 });

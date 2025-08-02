@@ -26,7 +26,8 @@ export async function getGearUsageReport(athleteId) {
     });
 
     return gears.map(gear => {
-      const distance = gear.distance != null ? conversions.metersToMiles(gear.distance) : null;
+      const distance = gear.distance != null ? conversions.metersToMiles(gear.distance) : null; // Only convert gear.distance (meters)
+      const activityDistance = gear.activities.reduce((sum, a) => sum + (a.distance || 0), 0); // Already in miles
       const totalMovingTime = gear.activities.reduce((sum, a) => sum + (a.movingTime || 0), 0);
       const lastUsed = gear.activities.length
         ? gear.activities.reduce((latest, a) => a.startDate > latest ? a.startDate : latest, gear.activities[0].startDate)
@@ -39,6 +40,7 @@ export async function getGearUsageReport(athleteId) {
         primary: gear.primary,
         activityCount: gear.activities.length,
         distance, // miles from Strava gear.distance
+        activityDistance, // sum of activity distances in miles
         totalMovingTimeSeconds: totalMovingTime,
         totalMovingTimeHours: secondsToHours(totalMovingTime),
         lastUsed,

@@ -32,12 +32,12 @@ model Activity {
   id                   BigInt   @id // Strava activity ID (primary key)
   athleteId            BigInt // Links to user
   name                 String   @default("") // Activity title
-  distance             Float? // Distance in meters
+  distance             Float? // Distance in miles (converted from meters on ingest)
   movingTime           Int? // Moving time in seconds
   elapsedTime          Int? // Total time in seconds
-  totalElevationGain   Float? // Elevation gain in meters
-  elevationHigh        Float? // Highest elevation in meters
-  elevationLow         Float? // Lowest elevation in meters
+  totalElevationGain   Float? // Elevation gain in feet (converted from meters on ingest)
+  elevationHigh        Float? // Highest elevation in feet (converted from meters on ingest)
+  elevationLow         Float? // Lowest elevation in feet (converted from meters on ingest)
   activityType         String // 'Ride', 'VirtualRide', 'Run', etc.
   startDate            DateTime // Activity start time
   achievementCount     Int? // Number of achievements
@@ -45,8 +45,8 @@ model Activity {
   trainer              Boolean  @default(false) // Indoor trainer flag
   commute              Boolean  @default(false) // Commute activity flag
   gearId               String? // Strava gear ID
-  averageSpeed         Float? // Average speed in m/s
-  maxSpeed             Float? // Maximum speed in m/s
+  averageSpeed         Float? // Average speed in mph
+  maxSpeed             Float? // Maximum speed in mph
   averageCadence       Float? // Average cadence in RPM
   averageTemperature   Float? // Average temperature in Celsius
   averageWatts         Float? // Average power in watts
