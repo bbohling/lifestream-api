@@ -89,6 +89,35 @@ export class ActivityService {
   }
 
   /**
+   * Batch upsert activities with counts of created and updated
+   */
+  async upsertActivitiesWithCounts(activities, concurrency = 5) {
+    if (!activities.length) return { added: 0, updated: 0 };
+    const ids = activities.map((a) => a.activityData.id);
+    // Fetch all existing IDs in one query
+    const existing = await prisma.activity.findMany({
+      where: { id: { in: ids } },
+      select: { id: true },
+    });
+    const existingIds = new Set(existing.map((a) => a.id.toString()));
+    let added = 0;
+    let updated = 0;
+    // Upsert in batches
+    for (let i = 0; i < activities.length; i += concurrency) {
+      const batch = activities.slice(i, i + concurrency);
+      const batchResults = await Promise.all(
+        batch.map(async (activity) => {
+          const isUpdate = existingIds.has(activity.activityData.id.toString());
+          await this.upsertActivity(activity);
+          if (isUpdate) updated++;
+          else added++;
+        })
+      );
+    }
+    return { added, updated };
+  }
+
+  /**
    * Get activities for yearly report
    */
   async getYearlyActivities(athleteId) {

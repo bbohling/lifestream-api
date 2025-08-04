@@ -65,16 +65,16 @@ router.get('/:userId', async (req, res, next) => {
       stravaService.transformActivity(activity)
     );
 
-    await activityService.upsertActivities(transformedActivities);
+    const { added, updated } = await activityService.upsertActivitiesWithCounts(transformedActivities);
 
     // Update user's last sync timestamp
     await activityService.updateLastSyncAt(userId);
 
     logger.info(
-      `Successfully processed ${transformedActivities.length} activities for user ${userId}`
+      `Successfully processed ${transformedActivities.length} activities for user ${userId} (added: ${added}, updated: ${updated})`
     );
 
-    res.json({ msg: 'success' });
+    res.json({ msg: 'success', added, updated });
   } catch (error) {
     logger.error('Ingestion error:', error.message);
     next(error);
