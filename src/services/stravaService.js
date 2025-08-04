@@ -682,6 +682,8 @@ export class StravaService {
       const athlete = await this.makeRequest('/athlete', accessToken);
       const allGear = [...(athlete.bikes || []), ...(athlete.shoes || [])];
       for (const gear of allGear) {
+        // Convert gear distance from meters to miles for consistency
+        const distanceMiles = gear.distance ? conversions.metersToMiles(gear.distance) : null;
         await prisma.gear.upsert({
           where: { id: gear.id },
           update: {
@@ -689,7 +691,7 @@ export class StravaService {
             primary: gear.primary || false,
             name: gear.name || '',
             resourceState: gear.resource_state || 2,
-            distance: gear.distance || null,
+            distance: distanceMiles,
             brandName: gear.brand_name || null,
             modelName: gear.model_name || null,
             frameType: gear.frame_type || null,
@@ -701,7 +703,7 @@ export class StravaService {
             primary: gear.primary || false,
             name: gear.name || '',
             resourceState: gear.resource_state || 2,
-            distance: gear.distance || null,
+            distance: distanceMiles,
             brandName: gear.brand_name || null,
             modelName: gear.model_name || null,
             frameType: gear.frame_type || null,

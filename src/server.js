@@ -38,7 +38,7 @@ app.use(compression());
 // CORS configuration
 app.use(
   cors({
-    origin: CORS_ORIGIN,
+    origin: NODE_ENV === 'development' ? [/^http:\/\/localhost:\d+$/] : CORS_ORIGIN,
     credentials: true,
   })
 );

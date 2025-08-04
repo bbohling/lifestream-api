@@ -173,7 +173,7 @@ describe('Integration Tests - Raw Data Separation', () => {
         model_name: 'ModelX',
         frame_type: 1,
         description: 'A test bike',
-        distance: 12345,
+        distance: require('../src/utils/calculations.js').conversions.metersToMiles(12345), // now in miles
         primary: true,
         resource_state: 2,
       },
@@ -198,7 +198,7 @@ describe('Integration Tests - Raw Data Separation', () => {
     expect(activity.gear.frameType).toBe(1);
     expect(activity.gear.primary).toBe(true);
     expect(activity.gear.description).toBe('A test bike');
-    expect(activity.gear.distance).toBe(12345);
+    expect(activity.gear.distance).toBeCloseTo(require('../src/utils/calculations.js').conversions.metersToMiles(12345), 6);
 
     // Verify gear exists in Gear table
     const gear = await prisma.gear.findUnique({ where: { id: gearId } });
@@ -209,6 +209,6 @@ describe('Integration Tests - Raw Data Separation', () => {
     expect(gear.frameType).toBe(1);
     expect(gear.primary).toBe(true);
     expect(gear.description).toBe('A test bike');
-    expect(gear.distance).toBe(12345);
+    expect(gear.distance).toBeCloseTo(require('../src/utils/calculations.js').conversions.metersToMiles(12345), 6);
   });
 });

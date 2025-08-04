@@ -50,17 +50,19 @@ export const dateUtils = {
 
   /**
    * Get start of year in Pacific Time.
+   * @param {number} year
    * @returns {Date}
    */
-  getStartOfYear: () => {
+  getStartOfYear: (year) => {
     return new Date(year, 0, 1);
   },
 
   /**
    * Get end of year in Pacific Time.
+   * @param {number} year
    * @returns {Date}
    */
-  getEndOfYear: () => {
+  getEndOfYear: (year) => {
     return new Date(year, 11, 31, 23, 59, 59, 999);
   },
 
@@ -114,12 +116,11 @@ export const reportCalculations = {
    * Calculate progress report metrics for a set of activities
    */
   calculateProgressMetrics: (activities, dayOfYear) => {
-    // Sum distance in meters, then convert to miles
-    const totalDistanceMeters = activities.reduce((sum, a) => sum + (a.distance || 0), 0); // meters
-    const miles = Math.round(conversions.metersToMiles(totalDistanceMeters) * 10) / 10;
+    // Sum distance in miles (already converted on ingest)
+    const miles = Math.round(activities.reduce((sum, a) => sum + (a.distance || 0), 0) * 10) / 10;
     const totalElevation = activities.reduce((sum, a) => sum + (a.totalElevationGain || 0), 0); // feet
     const totalMovingTime = activities.reduce((sum, a) => sum + (a.movingTime || 0), 0);
-    const totalKilojoules = activities.reduce((sum, a) => sum + (a.kilojoules || 0), 0); // fixed spelling
+    const totalKilojoules = activities.reduce((sum, a) => sum + (a.kilojoules || 0), 0);
     const totalSufferScore = activities.reduce((sum, a) => sum + (a.sufferScore || 0), 0);
 
     const daysRidden = dateUtils.getUniqueDates(activities).length;

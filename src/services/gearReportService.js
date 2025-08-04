@@ -1,7 +1,7 @@
 // Gear Usage Report Service
 // Aggregates gear usage stats for a user
 import { PrismaClient } from '@prisma/client';
-import { conversions, secondsToHours } from '../utils/calculations.js';
+import { secondsToHours } from '../utils/calculations.js';
 import { logger } from '../utils/logger.js';
 const prisma = new PrismaClient();
 
@@ -26,7 +26,8 @@ export async function getGearUsageReport(athleteId) {
     });
 
     return gears.map(gear => {
-      const distance = gear.distance != null ? conversions.metersToMiles(gear.distance) : null; // Only convert gear.distance (meters)
+      // gear.distance is now always in miles, do not convert
+      const distance = gear.distance != null ? gear.distance : null;
       const activityDistance = gear.activities.reduce((sum, a) => sum + (a.distance || 0), 0); // Already in miles
       const totalMovingTime = gear.activities.reduce((sum, a) => sum + (a.movingTime || 0), 0);
       const lastUsed = gear.activities.length

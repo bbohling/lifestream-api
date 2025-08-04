@@ -58,16 +58,16 @@ describe('Date Utilities', () => {
 describe('Report Calculations', () => {
   const mockActivities = [
     {
-      distance: 16093.4, // ~10 miles
-      totalElevationGain: 304.8, // ~1000 feet
+      distance: 10, // 10 miles (already converted)
+      totalElevationGain: 1000, // 1000 feet (already converted)
       movingTime: 3600, // 1 hour
       kilojoules: 1000,
       sufferScore: 50,
       startDate: new Date('2024-01-01T08:00:00'),
     },
     {
-      distance: 32186.8, // ~20 miles
-      totalElevationGain: 609.6, // ~2000 feet
+      distance: 20, // 20 miles (already converted)
+      totalElevationGain: 2000, // 2000 feet (already converted)
       movingTime: 7200, // 2 hours
       kilojoules: 2000,
       sufferScore: 75,
@@ -85,7 +85,7 @@ describe('Report Calculations', () => {
     expect(metrics.rideAverage).toBe(15.0);
     expect(metrics.dailyAverage).toBe(0.3);
     expect(metrics.percentageOfDays).toBe(2);
-    expect(metrics.climbing).toBe(914); // Correct sum and rounding
+    expect(metrics.climbing).toBe(3000); // Correct sum and rounding
     expect(metrics.calories).toBe(3000);
     expect(metrics.movingTimeMinutes).toBe(180); // 10800 seconds / 60
     expect(metrics.averageSufferScore).toBe(63); // (50 + 75) / 2 = 62.5, rounded to 63
