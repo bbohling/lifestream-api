@@ -385,6 +385,55 @@ export class ActivityService {
       throw error;
     }
   }
+
+  /**
+   * List all current KOMs for a user with details
+   */
+  async getAllKomsWithDetails(athleteId) {
+    try {
+      const activities = await prisma.activity.findMany({
+        where: {
+          athleteId: BigInt(athleteId),
+          komCount: { gt: 0 },
+        },
+        select: {
+          id: true,
+          name: true,
+          startDate: true,
+          komCount: true,
+          bestKomRank: true,
+          segmentEfforts: true,
+        },
+        orderBy: { startDate: 'desc' },
+      });
+      // Flatten all KOM segment efforts with activity context
+      const koms = [];
+      for (const activity of activities) {
+        const efforts = JSON.parse(activity.segmentEfforts || '[]');
+        for (const effort of efforts) {
+          if (effort.komRank) {
+            koms.push({
+              activityId: activity.id.toString(),
+              activityName: activity.name,
+              activityDate: activity.startDate,
+              segmentId: effort.segmentId,
+              segmentName: effort.segmentName,
+              komRank: effort.komRank,
+              elapsedTime: effort.elapsedTime,
+              movingTime: effort.movingTime,
+              achievements: effort.achievements,
+              startIndex: effort.startIndex,
+              endIndex: effort.endIndex,
+            });
+          }
+        }
+      }
+      return koms;
+    } catch (error) {
+      logger.error(`Failed to get all KOMs for athlete ${athleteId}:`, error.message);
+      throw error;
+    }
+  }
 }
 
 export default new ActivityService();
