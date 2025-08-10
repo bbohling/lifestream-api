@@ -86,4 +86,28 @@ router.get('/:userId/stats', async (req, res, next) => {
   }
 });
 
+/**
+ * GET /v1/koms/:userId/all
+ * List all current KOMs with details for a user
+ */
+router.get('/:userId/all', async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({ error: 'No user provided.' });
+    }
+    logger.info(`Getting all KOMs with details for user: ${userId}`);
+    // Get user from database
+    const user = await activityService.getUserByName(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    const koms = await activityService.getAllKomsWithDetails(user.athleteId);
+    res.json({ koms, total: koms.length });
+  } catch (error) {
+    logger.error('All KOMs details error:', error.message);
+    next(error);
+  }
+});
+
 export default router;
