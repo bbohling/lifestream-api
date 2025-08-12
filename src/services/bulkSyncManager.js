@@ -1,8 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 import stravaService from '../services/stravaService.js';
 import activityService from '../services/activityService.js';
+import segmentService from './segmentService.js';
 import { logger } from '../utils/logger.js';
 import { BULK_SYNC } from '../config.js';
+import { conversions } from '../utils/calculations.js';
 
 const prisma = new PrismaClient();
 
@@ -339,6 +341,49 @@ export class BulkSyncManager {
         for (const activity of detailedActivities) {
           const transformed = stravaService.transformActivity(activity);
           await activityService.upsertActivity(transformed);
+
+          // --- NEW: Upsert segments for each activity ---
+          if (activity.segment_efforts) {
+            const segmentIds = new Set();
+            for (const effort of activity.segment_efforts) {
+              if (effort.segment && effort.segment.id) {
+                segmentIds.add(effort.segment.id);
+              }
+            }
+            const segmentIdList = Array.from(segmentIds);
+            const concurrency = 5;
+            for (let i = 0; i < segmentIdList.length; i += concurrency) {
+              const batch = segmentIdList.slice(i, i + concurrency);
+              const batchPromises = batch.map(async (segmentId) => {
+                try {
+                  const segmentDataRaw = await stravaService.makeRequest(`/segments/${segmentId}`, accessToken);
+                  const segmentData = {
+                    id: BigInt(segmentDataRaw.id),
+                    name: segmentDataRaw.name || '',
+                    komAthleteId: segmentDataRaw.kom ? BigInt(segmentDataRaw.kom?.athlete_id) : null,
+                    komRank: segmentDataRaw.kom ? 1 : null,
+                    distance: segmentDataRaw.distance ? conversions.metersToMiles(segmentDataRaw.distance) : null,
+                    averageGrade: segmentDataRaw.average_grade || null,
+                    maximumGrade: segmentDataRaw.maximum_grade || null,
+                    elevationHigh: segmentDataRaw.elevation_high ? conversions.metersToFeet(segmentDataRaw.elevation_high) : null,
+                    elevationLow: segmentDataRaw.elevation_low ? conversions.metersToFeet(segmentDataRaw.elevation_low) : null,
+                    startLatLng: segmentDataRaw.start_latlng ? JSON.stringify(segmentDataRaw.start_latlng) : null,
+                    endLatLng: segmentDataRaw.end_latlng ? JSON.stringify(segmentDataRaw.end_latlng) : null,
+                    starred: segmentDataRaw.starred || false,
+                    lastUpdated: new Date(),
+                  };
+                  await segmentService.upsertSegment(segmentData);
+                } catch (error) {
+                  logger.error(`Failed to fetch/upsert segment ${segmentId}:`, error.message);
+                }
+              });
+              await Promise.all(batchPromises);
+              if (i + concurrency < segmentIdList.length) {
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+              }
+            }
+          }
+          // --- END NEW ---
         }
 
         // Update processed IDs
