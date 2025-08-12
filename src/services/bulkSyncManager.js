@@ -513,22 +513,22 @@ export class BulkSyncManager {
       status: state.status,
       phase: state.phase,
       progress: {
-        totalActivities: state.totalActivities,
-        processedActivities: state.processedActivities,
-        processedSummaries: state.processedSummaries,
-        percentage: state.totalActivities > 0 
-          ? Math.round((state.processedActivities / state.totalActivities) * 100)
-          : 0,
+      totalActivities: state.totalActivities,
+      processedActivities: state.processedActivities,
+      processedSummaries: state.processedSummaries,
+      percentage: state.totalActivities > 0 
+        ? Math.round((state.processedActivities / state.totalActivities) * 100)
+        : 0,
       },
       rateLimits: {
-        requestsUsedToday: state.requestsUsedToday,
-        remainingToday: remainingRequests,
-        dailyLimit: Math.min(this.dailyLimit, 950),
+      requestsUsedToday: state.requestsUsedToday,
+      remainingToday: remainingRequests,
+      dailyLimit: Math.min(this.dailyLimit, BULK_SYNC.dailyLimit ?? 950),
       },
       timing: {
-        startDate: state.startDate,
-        lastUpdate: state.updatedAt,
-        completedAt: state.completedAt,
+      startDate: state.startDate,
+      lastUpdate: state.updatedAt,
+      completedAt: state.completedAt,
       },
       error: state.errorMessage,
     };
