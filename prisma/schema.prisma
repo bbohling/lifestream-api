@@ -167,3 +167,25 @@ model Gear {
   @@index([athleteId])
   @@map("gears")
 }
+
+model Segment {
+  id            BigInt   @id // Strava segment ID
+  name          String
+  komAthleteId  BigInt? // Athlete ID of current KOM holder
+  komRank       Int?    // Rank of KOM (should be 1 for true KOM)
+  distance      Float?  // Segment distance in miles
+  averageGrade  Float?  // Average grade (%)
+  maximumGrade  Float?  // Maximum grade (%)
+  elevationHigh Float?  // Highest elevation in feet
+  elevationLow  Float?  // Lowest elevation in feet
+  startLatLng   String? // JSON array [lat, lng]
+  endLatLng     String? // JSON array [lat, lng]
+  starred       Boolean @default(false)
+  lastUpdated   DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  @@index([komAthleteId])
+  @@index([lastUpdated])
+  @@map("segments")
+}
