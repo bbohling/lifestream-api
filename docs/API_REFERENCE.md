@@ -34,6 +34,18 @@ Modern Node.js API for Strava fitness activity tracking and cycling analytics. I
 ### Retransform
 - `/v1/retransform` — Data reprocessing
 
+### Limits
+- `GET /v1/limits/:userId` — Get current Strava API rate limit status for the specified user
+
+#### Example Response
+```json
+{
+  "msg": "success",
+  "rateLimit": "100,1000",
+  "rateUsage": "10,100"
+}
+```
+
 ## Request/Response Patterns
 - All endpoints return `{ msg: "success" }` for success, `{ error: "Error message" }` for errors
 - Proper HTTP status codes: 400 (bad request), 404 (not found), 500 (server error)

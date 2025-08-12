@@ -10,6 +10,7 @@ import reportsRoutes from './routes/reports.js';
 import komsRoutes from './routes/koms.js';
 import retransformRoutes from './routes/retransform.js';
 import bulksyncRoutes from './routes/bulksync.js';
+import limitsRoutes from './routes/limits.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { logger } from './utils/logger.js';
 
@@ -70,6 +71,7 @@ app.use('/v1/reports', reportsRoutes);
 app.use('/v1/koms', komsRoutes);
 app.use('/v1/retransform', retransformRoutes);
 app.use('/v1/bulksync', bulksyncRoutes);
+app.use('/v1/limits', limitsRoutes);
 
 // 404 handler
 app.use((req, res) => {
