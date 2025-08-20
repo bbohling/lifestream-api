@@ -60,6 +60,10 @@ router.post('/:userId/start', async (req, res, next) => {
     // Start or resume bulk sync
     const result = await bulkSyncManager.resumeBulkSync(userId, accessToken);
 
+    // Fetch and upsert KOMs for athlete after bulk sync
+    const koms = await stravaService.fetchKoms(user.athleteId, accessToken);
+    const komResult = await stravaService.upsertKoms(koms, user.athleteId);
+
     res.json({
       success: true,
       message: result.alreadyComplete 
@@ -68,6 +72,7 @@ router.post('/:userId/start', async (req, res, next) => {
           ? 'Bulk sync completed successfully'
           : 'Bulk sync started/resumed - will continue tomorrow if daily limit reached',
       result,
+      komsAdded: komResult.added,
       progress: await bulkSyncManager.getBulkSyncProgress(userId),
     });
 
