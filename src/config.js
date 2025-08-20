@@ -6,8 +6,8 @@ export const STRAVA_OAUTH_URL = 'https://www.strava.com/oauth/token';
 export const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID;
 export const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 export const RATE_LIMITS = {
-  read: { limit15min: 100, limitDaily: 2000 }, // Conservative daily limit; actual is 3,000 (READ) daily
-  overall: { limit15min: 200, limitDaily: 5000 }, // actual is 6,000 (OVERALL) daily
+  read: { limit15min: 150, limitDaily: 2500 }, // Conservative daily limit; actual is 3,000 (READ) daily
+  overall: { limit15min: 550, limitDaily: 5500 }, // actual is 6,000 (OVERALL) daily
 };
 export const BULK_SYNC = {
   dailyLimit: 1200, // Conservative daily limit
