@@ -22,7 +22,8 @@
     "bulksync:status": "node scripts/bulksync.js status",
     "bulksync:reset": "node scripts/bulksync.js reset",
     "bulksync:overview": "node scripts/bulksync.js overview",
-    "setup:verify": "node scripts/verify-setup.js"
+    "setup:verify": "node scripts/verify-setup.js",
+    "rate-limit:watch": "node scripts/rate-limit-monitor.js watch"
   },
   "keywords": [
     "strava",
