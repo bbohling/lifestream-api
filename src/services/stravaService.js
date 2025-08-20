@@ -717,6 +717,113 @@ export class StravaService {
       logger.error(`Failed to fetch/upsert gear for athlete ${athleteId}:`, error.message);
     }
   }
+
+  /**
+   * Fetch KOMs for an athlete from Strava API
+   * @param {string|number|BigInt} athleteId
+   * @param {string} accessToken
+   * @returns {Promise<Array>} Array of KOM objects
+   */
+  async fetchKoms(athleteId, accessToken) {
+    try {
+      const endpoint = `/athletes/${athleteId}/koms`;
+      const koms = await this.makeRequest(endpoint, accessToken);
+      logger.info(`Fetched ${koms.length} KOMs for athlete ${athleteId}`);
+      return koms;
+    } catch (error) {
+      logger.error(`Failed to fetch KOMs for athlete ${athleteId}:`, error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Upsert KOMs into the database
+   * @param {Array} koms - Array of KOM objects from Strava
+   * @param {BigInt} athleteId
+   */
+  async upsertKoms(koms, athleteId) {
+    let added = 0;
+    let updated = 0;
+    for (const kom of koms) {
+      try {
+        // Perform conversions before saving
+        const distanceMiles = kom.distance ? conversions.metersToMiles(kom.distance) : null;
+        const elevationHighFeet = kom.segment?.elevation_high ? conversions.metersToFeet(kom.segment.elevation_high) : null;
+        const elevationLowFeet = kom.segment?.elevation_low ? conversions.metersToFeet(kom.segment.elevation_low) : null;
+        // If segment contains speed or temperature, convert here as well
+        // ...existing code...
+        await prisma.kom.upsert({
+          where: { id: BigInt(kom.id) },
+          update: {
+            athleteId: BigInt(kom.athlete?.id || athleteId),
+            activityId: BigInt(kom.activity?.id),
+            segmentId: BigInt(kom.segment?.id),
+            resourceState: kom.resource_state,
+            name: kom.name,
+            elapsedTime: kom.elapsed_time,
+            movingTime: kom.moving_time,
+            startDate: new Date(kom.start_date.replace('Z', '')),
+            startDateLocal: new Date(kom.start_date_local.replace('Z', '')),
+            distance: distanceMiles,
+            startIndex: kom.start_index,
+            endIndex: kom.end_index,
+            averageCadence: kom.average_cadence,
+            deviceWatts: kom.device_watts,
+            averageWatts: kom.average_watts,
+            averageHeartrate: kom.average_heartrate,
+            maxHeartrate: kom.max_heartrate,
+            prRank: kom.pr_rank,
+            komRank: kom.kom_rank,
+            visibility: kom.visibility,
+            achievements: JSON.stringify(kom.achievements || []),
+            segment: JSON.stringify({
+              ...kom.segment,
+              elevation_high: elevationHighFeet,
+              elevation_low: elevationLowFeet,
+            }),
+            updatedAt: new Date(),
+          },
+          create: {
+            id: BigInt(kom.id),
+            athleteId: BigInt(kom.athlete?.id || athleteId),
+            activityId: BigInt(kom.activity?.id),
+            segmentId: BigInt(kom.segment?.id),
+            resourceState: kom.resource_state,
+            name: kom.name,
+            elapsedTime: kom.elapsed_time,
+            movingTime: kom.moving_time,
+            startDate: new Date(kom.start_date.replace('Z', '')),
+            startDateLocal: new Date(kom.start_date_local.replace('Z', '')),
+            distance: distanceMiles,
+            startIndex: kom.start_index,
+            endIndex: kom.end_index,
+            averageCadence: kom.average_cadence,
+            deviceWatts: kom.device_watts,
+            averageWatts: kom.average_watts,
+            averageHeartrate: kom.average_heartrate,
+            maxHeartrate: kom.max_heartrate,
+            prRank: kom.pr_rank,
+            komRank: kom.kom_rank,
+            visibility: kom.visibility,
+            achievements: JSON.stringify(kom.achievements || []),
+            segment: JSON.stringify({
+              ...kom.segment,
+              elevation_high: elevationHighFeet,
+              elevation_low: elevationLowFeet,
+            }),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+        added++;
+      } catch (error) {
+        updated++;
+        logger.error(`Failed to upsert KOM ${kom.id}:`, error.message);
+      }
+    }
+    logger.info(`Upserted ${added} KOMs, ${updated} errors for athlete ${athleteId}`);
+    return { added, updated };
+  }
 }
 
 export default new StravaService();
