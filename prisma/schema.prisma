@@ -168,24 +168,37 @@ model Gear {
   @@map("gears")
 }
 
-model Segment {
-  id            BigInt   @id // Strava segment ID
-  name          String
-  komAthleteId  BigInt? // Athlete ID of current KOM holder
-  komRank       Int?    // Rank of KOM (should be 1 for true KOM)
-  distance      Float?  // Segment distance in miles
-  averageGrade  Float?  // Average grade (%)
-  maximumGrade  Float?  // Maximum grade (%)
-  elevationHigh Float?  // Highest elevation in feet
-  elevationLow  Float?  // Lowest elevation in feet
-  startLatLng   String? // JSON array [lat, lng]
-  endLatLng     String? // JSON array [lat, lng]
-  starred       Boolean @default(false)
-  lastUpdated   DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @default(now()) @updatedAt
+model Kom {
+  id                BigInt   @id // Strava KOM effort ID
+  athleteId         BigInt   // Strava athlete ID
+  activityId        BigInt   // Strava activity ID
+  segmentId         BigInt   // Strava segment ID
+  resourceState     Int
+  name              String
+  elapsedTime       Int
+  movingTime        Int
+  startDate         DateTime // UTC, remove 'Z' before storage
+  startDateLocal    DateTime // Pacific Time
+  distance          Float    // miles
+  startIndex        Int
+  endIndex          Int
+  averageCadence    Float?
+  deviceWatts       Boolean?
+  averageWatts      Float?
+  averageHeartrate  Float?
+  maxHeartrate      Int?
+  prRank            Int?
+  komRank           Int?
+  visibility        String
+  achievements      String   @default("[]") // JSON array
+  segment           String   // JSON object of segment details
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
 
-  @@index([komAthleteId])
-  @@index([lastUpdated])
-  @@map("segments")
+  @@index([athleteId])
+  @@index([activityId])
+  @@index([segmentId])
+  @@index([startDate])
+  @@index([komRank])
+  @@map("koms")
 }
