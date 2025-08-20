@@ -11,3 +11,6 @@ coverage
 # SQLite databases
 *.db
 *.db-journal
+*.db.backup
+*.sqlite
+*.sqlite-journal
