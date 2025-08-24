@@ -20,6 +20,7 @@ export async function getYearOverYearProgress(athleteId) {
         startDate: true,
         distance: true,
         totalElevationGain: true,
+        kilojoules: true,
         prCount: true,
         komCount: true,
         sufferScore: true,
@@ -41,6 +42,7 @@ export async function getYearOverYearProgress(athleteId) {
           komCount: 0,
           sufferScore: 0,
           movingTime: 0,
+          kilojoules: 0,
         };
       }
       yearly[year].rides++;
@@ -50,6 +52,7 @@ export async function getYearOverYearProgress(athleteId) {
       yearly[year].komCount += a.komCount || 0;
       yearly[year].sufferScore += a.sufferScore || 0;
       yearly[year].movingTime += a.movingTime || 0;
+      yearly[year].kilojoules += a.kilojoules || 0;
     }
     // Format and round
     return Object.values(yearly).map(y => ({
@@ -61,6 +64,7 @@ export async function getYearOverYearProgress(athleteId) {
       komCount: y.komCount,
       avgSufferScore: y.rides > 0 ? Math.round(y.sufferScore / y.rides) : 0,
       movingTimeHours: Math.round((y.movingTime / 3600) * 10) / 10,
+      kilojoules: Math.round(y.kilojoules),
     })).sort((a, b) => a.year - b.year);
   } catch (err) {
     logger.error('Failed to generate year-over-year progress', { athleteId, error: err });
