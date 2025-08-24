@@ -1,5 +1,6 @@
 import express from 'express';
 import activityService from '../services/activityService.js';
+import komService from '../services/komService.js';
 import { logger } from '../utils/logger.js';
 
 const router = express.Router();
@@ -25,29 +26,10 @@ router.get('/:userId', async (req, res, next) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    const komActivities = await activityService.getKomActivities(user.athleteId, parseInt(limit));
+  // Fetch kom activities from the koms table (grouped by activity)
+  const komActivities = await komService.getKomActivities(user.athleteId, parseInt(limit));
 
-    // Parse segment efforts to show KOM details
-    const enrichedActivities = komActivities.map((activity) => ({
-      id: activity.id.toString(),
-      name: activity.name,
-      date: activity.startDate,
-      komCount: activity.komCount,
-      bestKomRank: activity.bestKomRank,
-      bestPrRank: activity.bestPrRank,
-      koms: JSON.parse(activity.segmentEfforts || '[]')
-        .filter((effort) => effort.komRank)
-        .map((effort) => ({
-          segmentName: effort.segmentName,
-          rank: effort.komRank,
-          achievements: effort.achievements,
-        })),
-    }));
-
-    res.json({
-      activities: enrichedActivities,
-      total: komActivities.length,
-    });
+  res.json({ activities: komActivities, total: komActivities.length });
   } catch (error) {
     logger.error('KOM activities error:', error.message);
     next(error);
@@ -74,12 +56,9 @@ router.get('/:userId/stats', async (req, res, next) => {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    const komStats = await activityService.getKomStats(user.athleteId);
+  const komStats = await komService.getKomStats(user.athleteId);
 
-    res.json({
-      user: userId,
-      stats: komStats,
-    });
+  res.json({ user: userId, stats: komStats });
   } catch (error) {
     logger.error('KOM stats error:', error.message);
     next(error);
@@ -102,8 +81,8 @@ router.get('/:userId/all', async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
-    const koms = await activityService.getAllKomsWithDetails(user.athleteId);
-    res.json({ koms, total: koms.length });
+  const koms = await komService.getAllKomsWithDetails(user.athleteId);
+  res.json({ koms, total: koms.length });
   } catch (error) {
     logger.error('All KOMs details error:', error.message);
     next(error);
