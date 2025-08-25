@@ -71,3 +71,9 @@ Contributing
 - Update `docs/API_REFERENCE.md` when changing controllers or routes.
 
 ---
+
+## todo
+
+- [ ] general cleanup after AI spewings
+- [ ] replace `/v1/reports/cycling/yearly` endpoint with the code from`/v1/reports/year-over-year`
+- [ ] _more to come_
