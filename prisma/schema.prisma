@@ -1,0 +1,204 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  name         String     @unique // User identifier (e.g., "brandon")
+  athleteId    BigInt     @unique // Strava athlete ID for queries
+  accessToken  String // OAuth access token
+  refreshToken String // OAuth refresh token
+  expiresAt    Int // Token expiration (Unix timestamp)
+  lastSyncAt   DateTime? // Last successful sync timestamp for incremental updates
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @default(now()) @updatedAt
+  activities   Activity[]
+
+  @@map("users")
+}
+
+model Activity {
+  id                   BigInt   @id // Strava activity ID (primary key)
+  athleteId            BigInt // Links to user
+  name                 String   @default("") // Activity title
+  distance             Float? // Distance in miles (converted from meters on ingest)
+  movingTime           Int? // Moving time in seconds
+  elapsedTime          Int? // Total time in seconds
+  totalElevationGain   Float? // Elevation gain in feet (converted from meters on ingest)
+  elevationHigh        Float? // Highest elevation in feet (converted from meters on ingest)
+  elevationLow         Float? // Lowest elevation in feet (converted from meters on ingest)
+  activityType         String // 'Ride', 'VirtualRide', 'Run', etc.
+  startDate            DateTime // Activity start time
+  achievementCount     Int? // Number of achievements
+  prCount              Int? // Number of personal records
+  trainer              Boolean  @default(false) // Indoor trainer flag
+  commute              Boolean  @default(false) // Commute activity flag
+  gearId               String? // Strava gear ID
+  averageSpeed         Float? // Average speed in mph
+  maxSpeed             Float? // Maximum speed in mph
+  averageCadence       Float? // Average cadence in RPM
+  averageTemperature   Float? // Average temperature in Celsius
+  averageWatts         Float? // Average power in watts
+  maxWatts             Int? // Maximum power in watts
+  weightedAverageWatts Int? // Weighted average power
+  kilojoules           Float? // Energy expenditure
+  deviceWatts          Boolean? // Power meter data flag
+  averageHeartRate     Float? // Average HR in BPM
+  maxHeartRate         Int? // Maximum HR in BPM
+  sufferScore          Int      @default(0) // Strava relative effort
+  segmentEfforts       String?  @default("[]") // JSON array of segment efforts with KOM/PR data
+  komCount             Int      @default(0) // Number of KOMs (King of the Mountain) achieved
+  bestKomRank          Int? // Best KOM rank achieved in this activity (lower is better)
+  bestPrRank           Int? // Best PR rank achieved in this activity (lower is better)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user        User         @relation(fields: [athleteId], references: [athleteId])
+  rawActivity RawActivity?
+  gear        Gear?         @relation(fields: [gearId], references: [id])
+
+  @@index([athleteId])
+  @@index([startDate])
+  @@index([activityType])
+  @@index([athleteId, activityType])
+  @@index([athleteId, startDate])
+  @@index([komCount])
+  @@index([bestKomRank])
+  @@index([athleteId, komCount])
+  @@map("activities")
+}
+
+model RawActivity {
+  activityId BigInt   @id // Links to Activity table
+  rawData    String // Complete Strava API response for future data mining
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@map("raw_activities")
+}
+
+model BulkSyncState {
+  id                    String    @id @default(uuid())
+  userId                String    @unique // Links to user name
+  athleteId             BigInt    // Strava athlete ID for reference
+  status                String    @default("pending") // pending, running, paused, complete, error
+  phase                 String    @default("summary_fetch") // summary_fetch, detail_fetch, complete
+  totalActivities       Int       @default(0) // Total activities found
+  processedActivities   Int       @default(0) // Activities with full details processed
+  processedSummaries    Int       @default(0) // Summary records processed
+  requestsUsedToday     Int       @default(0) // API requests used today
+  currentPage           Int       @default(1) // Current pagination page for summaries
+  processedActivityIds  String    @default("[]") // JSON array of processed activity IDs
+  startDate             DateTime  @default(now()) // When bulk sync started
+  lastResetDate         DateTime  @default(now()) // Last daily limit reset
+  completedAt           DateTime? // When bulk sync completed
+  errorMessage          String? // Last error message if any
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now()) @updatedAt
+
+  @@map("bulk_sync_states")
+}
+
+model BulkSyncSummaries {
+  id         String   @id @default(uuid())
+  userId     String   // User identifier
+  activityId BigInt   // Strava activity ID
+  summaryData String  // JSON of activity summary
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, activityId])
+  @@index([userId])
+  @@map("bulk_sync_summaries")
+}
+
+model RateLimitLog {
+  id                    String   @id @default(uuid())
+  timestamp             DateTime @default(now())
+  endpoint              String   // The API endpoint called
+  // Overall limits (all endpoints)
+  overallLimit15min     Int      // Overall 15-minute limit
+  overallLimitDaily     Int      // Overall daily limit  
+  overallUsage15min     Int      // Overall 15-minute usage
+  overallUsageDaily     Int      // Overall daily usage
+  // Read limits (non-upload endpoints)
+  readLimit15min        Int      // Read 15-minute limit
+  readLimitDaily        Int      // Read daily limit
+  readUsage15min        Int      // Read 15-minute usage
+  readUsageDaily        Int      // Read daily usage
+  // Calculated utilization percentages
+  maxUtilizationPercent Float    // Highest utilization across all limits
+  delayAppliedMs        Int      @default(0) // Delay applied due to rate limiting
+  wasRateLimited        Boolean  @default(false) // Whether this request was rate limited (429)
+  retryAfterMs          Int?     // Retry-after value if rate limited
+
+  @@index([timestamp])
+  @@index([endpoint])
+  @@index([overallUsageDaily])
+  @@index([readUsageDaily])
+  @@map("rate_limit_logs")
+}
+
+model Gear {
+  id             String   @id // Strava gear ID
+  primary        Boolean  @default(false) // Is this the athlete's primary gear?
+  name           String   // Gear name
+  resourceState  Int      // Strava resource state
+  distance       Float?   // Total distance in meters
+  brandName      String?  // Brand name
+  modelName      String?  // Model name
+  frameType      Int?     // Strava frame type (bike: 1, mtb: 2, etc)
+  description    String?  // Gear description
+  athleteId      BigInt   // Owner athlete
+  activities     Activity[]
+
+  @@index([athleteId])
+  @@map("gears")
+}
+
+model Kom {
+  id                BigInt   @id // Strava KOM effort ID
+  athleteId         BigInt   // Strava athlete ID
+  activityId        BigInt   // Strava activity ID
+  segmentId         BigInt   // Strava segment ID
+  resourceState     Int
+  name              String
+  elapsedTime       Int
+  movingTime        Int
+  startDate         DateTime // UTC, remove 'Z' before storage
+  startDateLocal    DateTime // Pacific Time
+  distance          Float    // miles
+  startIndex        Int
+  endIndex          Int
+  averageCadence    Float?
+  deviceWatts       Boolean?
+  averageWatts      Float?
+  averageHeartrate  Float?
+  maxHeartrate      Int?
+  prRank            Int?
+  komRank           Int?
+  visibility        String
+  achievements      String   @default("[]") // JSON array
+  segment           String   // JSON object of segment details
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
+
+  @@index([athleteId])
+  @@index([activityId])
+  @@index([segmentId])
+  @@index([startDate])
+  @@index([komRank])
+  @@map("koms")
+}
