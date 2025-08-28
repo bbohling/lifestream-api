@@ -32,6 +32,8 @@ const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
 
+console.log(`id: ${process.env.STRAVA_CLIENT_ID}`);
+
 // Security middleware
 app.use(helmet());
 app.use(compression());
