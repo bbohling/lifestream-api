@@ -202,3 +202,21 @@ model Kom {
   @@index([komRank])
   @@map("koms")
 }
+
+model IngestLog {
+  id        String   @id @default(uuid())
+  userId    String   // User identifier (e.g., "brandon")
+  timestamp DateTime @default(now())
+  success   Boolean  // Whether the ingestion was successful
+  added     Int?     // Number of activities added
+  updated   Int?     // Number of activities updated
+  komsAdded Int?     // Number of KOMs added
+  error     String?  // Error message if failed
+  duration  Int?     // Duration in milliseconds
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([success])
+  @@map("ingest_logs")
+}
