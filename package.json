@@ -22,6 +22,8 @@
     "bulksync:status": "node scripts/bulksync.js status",
     "bulksync:reset": "node scripts/bulksync.js reset",
     "bulksync:overview": "node scripts/bulksync.js overview",
+    "cronjob:ingest": "node scripts/ingest-job.js",
+    "cronjob:monitor": "node scripts/monitor-ingest-jobs.js",
     "setup:verify": "node scripts/verify-setup.js",
     "rate-limit:watch": "node scripts/rate-limit-monitor.js watch"
   },
@@ -43,6 +45,7 @@
     "@prisma/client": "^6.1.0",
     "compression": "^1.7.5",
     "cors": "^2.8.5",
+    "cron": "^4.3.3",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.0.0",
     "express": "^5.0.1",
