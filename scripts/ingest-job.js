@@ -115,17 +115,17 @@ async function executeIngestion() {
  * Create and start the cron job
  */
 function startCronJob() {
-  // Run every hour at minute 0
+  // Run every hour at minute 5
   const job = new CronJob(
-    '0 * * * *', // cron pattern: "At minute 0 of every hour"
+    '5 * * * *', // cron pattern: "At minute 5 of every hour"
     executeIngestion,
     null, // onComplete callback
     true, // start immediately
     'America/Los_Angeles' // timezone (Pacific Time)
   );
 
-  logger.info('🚀 Hourly ingestion cron job started - will run every hour at minute 0');
-  logger.info(`Next execution: ${job.nextDate().toISOString()}`);
+  logger.info('🚀 Hourly ingestion cron job started - will run every hour at minute 5');
+  logger.info(`Next execution: ${job.nextDate().toJSDate().toISOString()}`);
 
   return job;
 }
