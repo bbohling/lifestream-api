@@ -7,6 +7,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../src/utils/logger.js';
+import { CronJob } from 'cron';
 
 const prisma = new PrismaClient();
 
@@ -105,37 +106,62 @@ async function executeIngestion() {
       },
     });
 
-    throw error;
+    // Don't throw error - let cron continue running
+    return null;
   }
 }
 
 /**
- * Main function
+ * Create and start the cron job
  */
-async function main() {
-  try {
-    await executeIngestion();
-    process.exit(0);
-  } catch (error) {
-    logger.error('Cronjob failed:', error.message);
-    process.exit(1);
-  } finally {
-    await prisma.$disconnect();
-  }
+function startCronJob() {
+  // Run every hour at minute 0
+  const job = new CronJob(
+    '0 * * * *', // cron pattern: "At minute 0 of every hour"
+    executeIngestion,
+    null, // onComplete callback
+    true, // start immediately
+    'America/Los_Angeles' // timezone (Pacific Time)
+  );
+
+  logger.info('🚀 Hourly ingestion cron job started - will run every hour at minute 0');
+  logger.info(`Next execution: ${job.nextDate().toISOString()}`);
+
+  return job;
 }
 
-// Handle graceful shutdown
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, shutting down cronjob gracefully');
+/**
+ * Handle graceful shutdown
+ */
+async function gracefulShutdown(signal) {
+  logger.info(`${signal} received, shutting down cronjob gracefully`);
+  
+  if (cronJob) {
+    cronJob.stop();
+    logger.info('Cron job stopped');
+  }
+  
   await prisma.$disconnect();
+  logger.info('Database connection closed');
   process.exit(0);
+}
+
+// Start the cron job
+const cronJob = startCronJob();
+
+// Handle graceful shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Keep the process alive
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught exception:', error);
+  // Don't exit - let cron continue
 });
 
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, shutting down cronjob gracefully');
-  await prisma.$disconnect();
-  process.exit(0);
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled rejection at:', promise, 'reason:', reason);
+  // Don't exit - let cron continue
 });
 
-// Run the main function
-main();
+logger.info('Hourly ingestion daemon started and running...');
