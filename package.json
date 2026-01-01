@@ -48,7 +48,7 @@
     "cron": "^4.3.3",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.0.0",
-    "express": "^5.0.1",
+    "express": "^5.2.1",
     "express-rate-limit": "^7.4.1",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
