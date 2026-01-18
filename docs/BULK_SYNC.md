@@ -2,7 +2,7 @@
 
 ## 🎯 **Your Best Options for Fetching All Data**
 
-Given Strava's daily limit of **1,000 requests per day** for read operations, here are your options ranked by effectiveness:
+Given Strava's daily limit of **3,000 requests per day** for read operations (elevated limit for approved apps; default is 2,000), here are your options ranked by effectiveness:
 
 ### **Option 1: Multi-Day Resumable Bulk Sync (RECOMMENDED) ⭐**
 
@@ -11,7 +11,7 @@ This is your **best option** for large-scale data retrieval:
 - **Automatic multi-day operation**: Continues over several days if needed
 - **Resumable**: Picks up exactly where it left off each day
 - **Zero data loss**: Tracks every request and processed activity
-- **Conservative rate limiting**: Uses 950/1000 daily requests (50 buffer)
+- **Conservative rate limiting**: Uses 2,500/3,000 daily requests (500 buffer)
 - **Progress tracking**: Full visibility into sync status
 - **Error recovery**: Handles failures gracefully
 
@@ -36,7 +36,7 @@ For a user with **2,000 activities**:
 - **Summary fetch**: ~10 requests (200 activities per request)
 - **Detail fetch**: 2,000 requests (1 per activity)
 - **Total needed**: ~2,010 requests
-- **Time required**: **3 days** (950 requests per day)
+- **Time required**: **1 day** (2,500 requests per day with elevated limits)
 
 ## 🚀 **Using Multi-Day Bulk Sync**
 
@@ -109,7 +109,7 @@ npm run bulksync:resume brandon
 ## 🛡️ **Safety Features**
 
 ### **Rate Limit Protection:**
-- **Conservative limits**: 950/1000 daily requests (buffer included)
+- **Conservative limits**: 2,500/3,000 daily requests (buffer included)
 - **Smart delays**: Progressive delays based on usage percentage
 - **Auto-reset**: Daily counters reset at midnight UTC
 - **Header tracking**: Uses Strava's actual rate limit headers
@@ -156,7 +156,7 @@ The system provides detailed progress information:
 ### **Speed:**
 - **Summary phase**: ~200 activities per request
 - **Detail phase**: 5 concurrent requests per batch
-- **Rate**: ~900-950 activities per day
+- **Rate**: ~2,500 activities per day (with elevated limits)
 - **Efficiency**: Near-optimal API usage
 
 ### **Memory:**
@@ -171,12 +171,14 @@ The system provides detailed progress information:
 
 ## 🎛️ **Configuration Options**
 
-You can customize the bulk sync behavior by modifying `bulkSyncManager.js`:
+You can customize the bulk sync behavior in `src/config.js`:
 
 ```javascript
-this.dailyLimit = 950;           // Conservative daily limit
-this.batchSize = 5;              // Concurrent requests per batch  
-this.delayBetweenBatches = 2000; // 2 seconds between batches
+export const BULK_SYNC = {
+  dailyLimit: 2500,        // Conservative daily limit (3,000 read limit - 500 buffer)
+  batchSize: 5,            // Concurrent requests per batch  
+  delayBetweenBatches: 2000, // 2 seconds between batches
+};
 ```
 
 ## 🔧 **Troubleshooting**

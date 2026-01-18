@@ -247,12 +247,12 @@ export class StravaService {
         },
       });
 
-      // Log significant usage milestones for visibility
-      if (state.read.usageDaily >= 2500) {
+      // Log significant usage milestones based on percentage of limit
+      if (readUtilDaily >= 90) {
         logger.warn(`🚨 Critical: ${state.read.usageDaily}/${state.read.limitDaily} daily read requests used (${Math.round(readUtilDaily)}%)`);
-      } else if (state.read.usageDaily >= 2000) {
+      } else if (readUtilDaily >= 75) {
         logger.warn(`⚠️  High usage: ${state.read.usageDaily}/${state.read.limitDaily} daily read requests used (${Math.round(readUtilDaily)}%)`);
-      } else if (state.read.usageDaily >= 1500) {
+      } else if (readUtilDaily >= 50) {
         logger.info(`📊 Moderate usage: ${state.read.usageDaily}/${state.read.limitDaily} daily read requests used (${Math.round(readUtilDaily)}%)`);
       }
     } catch (error) {
