@@ -57,6 +57,12 @@ router.post('/:userId/start', async (req, res, next) => {
       });
     }
 
+    // If force is true and sync was complete, reset to fetch new activities
+    if (force && currentProgress.status === 'complete') {
+      logger.info(`Force flag set - resetting bulk sync state to fetch new activities`);
+      await bulkSyncManager.resetBulkSync(userId);
+    }
+
     // Start or resume bulk sync
     const result = await bulkSyncManager.resumeBulkSync(userId, accessToken);
 

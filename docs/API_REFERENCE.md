@@ -90,7 +90,8 @@ Modern Node.js API for Strava fitness activity tracking and cycling analytics. I
 ## Bulk sync
 
 - POST /v1/bulksync/:userId/start
-  - Purpose: Start or resume a user's bulk historical sync. Body may include `{ force: boolean }` to re-run completed syncs.
+  - Purpose: Start or resume a user's bulk historical sync.
+  - Body: `{ force: boolean }` — when `true`, resets a completed sync to fetch new activities.
   - Route file: `src/routes/bulksync.js` (router.post('/:userId/start', ...))
   - Primary services: `src/services/bulkSyncManager.js`, `src/services/stravaService.js`, `src/services/activityService.js`
   - Response: `{ success: true, message, result, komsAdded, progress }`.

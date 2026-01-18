@@ -46,6 +46,9 @@ For a user with **2,000 activities**:
 # Start bulk sync (will auto-resume daily)
 npm run bulksync:start brandon
 
+# Force re-sync to fetch new activities (resets completed sync)
+npm run bulksync:start brandon --force
+
 # Check progress anytime
 npm run bulksync:status brandon
 
@@ -64,6 +67,11 @@ npm run bulksync:reset brandon
 ```bash
 # Start bulk sync
 curl -X POST http://localhost:3000/v1/bulksync/brandon/start
+
+# Force re-sync to fetch new activities (resets completed sync)
+curl -X POST http://localhost:3000/v1/bulksync/brandon/start \
+  -H "Content-Type: application/json" \
+  -d '{"force": true}'
 
 # Check status
 curl http://localhost:3000/v1/bulksync/brandon/status
@@ -190,6 +198,10 @@ this.delayBetweenBatches = 2000; // 2 seconds between batches
 **"Missing activities"**
 - Bulk sync gets ALL activities, nothing missed
 - Uses pagination to ensure complete coverage
+
+**"Sync complete but missing recent activities"**
+- Use `--force` flag to re-sync: `npm run bulksync:start brandon --force`
+- This resets the sync state and fetches all activities again, including new ones
 
 ### **Monitoring:**
 

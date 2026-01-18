@@ -3,11 +3,12 @@
 /**
  * CLI script for managing bulk sync operations
  * Usage:
- *   npm run bulksync:start <userId>     # Start bulk sync
- *   npm run bulksync:resume <userId>    # Resume paused bulk sync
- *   npm run bulksync:status <userId>    # Check status
- *   npm run bulksync:reset <userId>     # Reset and start over
- *   npm run bulksync:overview           # Show all bulk sync operations
+ *   npm run bulksync:start <userId>           # Start bulk sync
+ *   npm run bulksync:start <userId> --force   # Force re-sync to fetch new activities
+ *   npm run bulksync:resume <userId>          # Resume paused bulk sync
+ *   npm run bulksync:status <userId>          # Check status
+ *   npm run bulksync:reset <userId>           # Reset and start over
+ *   npm run bulksync:overview                 # Show all bulk sync operations
  */
 
 import bulkSyncManager from '../src/services/bulkSyncManager.js';
@@ -17,6 +18,7 @@ import { logger } from '../src/utils/logger.js';
 
 const command = process.argv[2];
 const userId = process.argv[3];
+const forceFlag = process.argv.includes('--force') || process.argv.includes('-f');
 
 async function main() {
   try {
@@ -38,6 +40,13 @@ async function main() {
         accessToken = tokenData.accessToken;
       } else {
         logger.info('✅ Access token is still valid');
+      }
+
+      // Check if force flag is set and sync is complete - reset first
+      const currentProgress = await bulkSyncManager.getBulkSyncProgress(userId);
+      if (forceFlag && currentProgress.status === 'complete') {
+        logger.info('🔄 Force flag set - resetting bulk sync state to fetch new activities...');
+        await bulkSyncManager.resetBulkSync(userId);
       }
 
       const result = await bulkSyncManager.resumeBulkSync(userId, accessToken);
@@ -156,14 +165,19 @@ async function main() {
       console.log('Bulk Sync Management Tool');
       console.log('');
       console.log('Usage:');
-      console.log('  node scripts/bulksync.js start <userId>      # Start bulk sync');
-      console.log('  node scripts/bulksync.js resume <userId>     # Resume paused bulk sync');
-      console.log('  node scripts/bulksync.js status <userId>     # Check status');
-      console.log('  node scripts/bulksync.js reset <userId>      # Reset and start over');
-      console.log('  node scripts/bulksync.js overview            # Show all operations');
+      console.log('  node scripts/bulksync.js start <userId>           # Start bulk sync');
+      console.log('  node scripts/bulksync.js start <userId> --force   # Force re-sync (fetches new activities)');
+      console.log('  node scripts/bulksync.js resume <userId>          # Resume paused bulk sync');
+      console.log('  node scripts/bulksync.js status <userId>          # Check status');
+      console.log('  node scripts/bulksync.js reset <userId>           # Reset and start over');
+      console.log('  node scripts/bulksync.js overview                 # Show all operations');
+      console.log('');
+      console.log('Options:');
+      console.log('  --force, -f    Reset completed sync to fetch new activities');
       console.log('');
       console.log('Examples:');
       console.log('  node scripts/bulksync.js start brandon');
+      console.log('  node scripts/bulksync.js start brandon --force');
       console.log('  node scripts/bulksync.js status brandon');
       console.log('  node scripts/bulksync.js overview');
       process.exit(1);

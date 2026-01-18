@@ -17,15 +17,15 @@
     "prisma:deploy": "prisma migrate deploy",
     "retransform:all": "node scripts/retransform-activities.js all",
     "retransform:user": "node scripts/retransform-activities.js user",
-    "bulksync:start": "node scripts/bulksync.js start",
+    "bulksync:start": "node  --env-file=.env scripts/bulksync.js start",
     "bulksync:resume": "node scripts/bulksync.js resume",
     "bulksync:status": "node scripts/bulksync.js status",
     "bulksync:reset": "node scripts/bulksync.js reset",
     "bulksync:overview": "node scripts/bulksync.js overview",
     "cronjob:ingest": "node scripts/ingest-job.js",
-    "cronjob:monitor": "node scripts/monitor-ingest-jobs.js",
-    "setup:verify": "node scripts/verify-setup.js",
-    "rate-limit:watch": "node scripts/rate-limit-monitor.js watch"
+    "cronjob:monitor": "node  --env-file=.env scripts/monitor-ingest-jobs.js",
+    "setup:verify": "node  --env-file=.env scripts/verify-setup.js",
+    "rate-limit:watch": "node  --env-file=.env scripts/rate-limit-monitor.js watch"
   },
   "keywords": [
     "strava",

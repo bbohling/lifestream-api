@@ -430,7 +430,7 @@ export class BulkSyncManager {
   async resumeBulkSync(userId, accessToken) {
     logger.info(`Resuming bulk sync for user ${userId}`);
     
-    const state = await this.getBulkSyncState(userId);
+    let state = await this.getBulkSyncState(userId);
     
     logger.info(`Current state: ${state.status}, Phase: ${state.phase}`);
     logger.info(`Progress: ${state.processedActivities}/${state.totalActivities} activities`);
@@ -449,9 +449,21 @@ export class BulkSyncManager {
       });
     }
 
+    // Phase 1: Summary fetch
     if (state.phase === 'summary_fetch' || state.phase === 'paused_daily_limit') {
-      return await this.fetchAllSummariesPhase(userId, accessToken);
-    } else if (state.phase === 'detail_fetch') {
+      const summaryResult = await this.fetchAllSummariesPhase(userId, accessToken);
+      
+      // If we hit the daily limit during summary phase, return paused
+      if (summaryResult.remainingRequests === 0) {
+        return summaryResult;
+      }
+      
+      // Summary phase complete - refresh state and continue to detail phase
+      state = await this.getBulkSyncState(userId);
+    }
+    
+    // Phase 2: Detail fetch
+    if (state.phase === 'detail_fetch') {
       return await this.fetchDetailsPhase(userId, accessToken);
     }
 
