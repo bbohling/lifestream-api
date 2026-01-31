@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 /**
  * Returns year-over-year progress for the given athleteId
  * @param {bigint} athleteId
- * @returns {Promise<Array>} Array of { year, rides, miles, elevation, prCount, komCount, sufferScore, movingTimeHours }
+ * @returns {Promise<Array>} Array of { year, rides, miles, elevation, movingTimeHours, kilojoules }
  */
 export async function getYearOverYearProgress(athleteId) {
   try {
@@ -21,9 +21,6 @@ export async function getYearOverYearProgress(athleteId) {
         distance: true,
         totalElevationGain: true,
         kilojoules: true,
-        prCount: true,
-        komCount: true,
-        sufferScore: true,
         movingTime: true,
       },
       orderBy: { startDate: 'asc' },
@@ -38,9 +35,6 @@ export async function getYearOverYearProgress(athleteId) {
           rides: 0,
           miles: 0,
           elevation: 0,
-          prCount: 0,
-          komCount: 0,
-          sufferScore: 0,
           movingTime: 0,
           kilojoules: 0,
         };
@@ -48,9 +42,6 @@ export async function getYearOverYearProgress(athleteId) {
       yearly[year].rides++;
       yearly[year].miles += a.distance || 0;
       yearly[year].elevation += a.totalElevationGain || 0;
-      yearly[year].prCount += a.prCount || 0;
-      yearly[year].komCount += a.komCount || 0;
-      yearly[year].sufferScore += a.sufferScore || 0;
       yearly[year].movingTime += a.movingTime || 0;
       yearly[year].kilojoules += a.kilojoules || 0;
     }
@@ -60,9 +51,6 @@ export async function getYearOverYearProgress(athleteId) {
       rides: y.rides,
       miles: Math.round(y.miles * 10) / 10,
       elevation: Math.round(y.elevation),
-      prCount: y.prCount,
-      komCount: y.komCount,
-      avgSufferScore: y.rides > 0 ? Math.round(y.sufferScore / y.rides) : 0,
       movingTimeHours: Math.round((y.movingTime / 3600) * 10) / 10,
       kilojoules: Math.round(y.kilojoules),
     })).sort((a, b) => a.year - b.year);
