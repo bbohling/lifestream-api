@@ -14,7 +14,12 @@
       "database_name": "lifestream",
       "database_id": "ca9fa129-c679-4441-b15c-62695facd678"
     }
+  ],
+  "routes": [
+    {
+      "pattern": "brndn.me/api/*",
+      "zone_name": "brndn.me"
+    }
   ]
   // Secrets (set with `wrangler secret put`): STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET
-  // Route brndn.me/api/* is added at cutover (zone must be active first).
 }
